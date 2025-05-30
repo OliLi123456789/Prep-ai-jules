@@ -5,7 +5,11 @@ import Header from './components/Header';
 import Testimonials from './components/Testimonials';
 import Dashboard from './components/Dashboard';
 import PracticePage from './components/PracticePage';
-import TestPage from './components/TestPage'; // Import TestPage
+import TestPage from './components/TestPage';
+import SettingsPage from './components/SettingsPage';
+import AnalyticsPage from './components/AnalyticsPage';
+import AITutorPage from './components/AITutorPage'; // Import AITutorPage
+import AILearnPage from './components/AILearnPage'; // Import AILearnPage
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -29,8 +33,11 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/practice" element={<PracticePage />} />
-                <Route path="/tests" element={<TestPage />} /> {/* Add TestPage route */}
-                {/* Add other logged-in routes here: /profile etc. */}
+                <Route path="/tests" element={<TestPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/ai-tutor" element={<AITutorPage />} /> {/* Add AITutorPage route */}
+                <Route path="/ai-learn" element={<AILearnPage />} /> {/* Add AILearnPage route */}
                 <Route path="*" element={<Navigate to="/" />} /> {/* Redirect to dashboard if logged in and path unknown */}
               </>
             ) : (

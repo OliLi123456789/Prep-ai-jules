@@ -15,16 +15,255 @@ main {
   /* background-color: #f4f6f8; */ /* Example background */
 }
 
+/* === General Page Structure & Typography === */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --light-color: #f8f9fa;
+  --dark-color: #343a40;
+  --text-color: #333;
+  --text-muted-color: #6c757d;
+  --border-color: #dee2e6;
+  --border-radius-base: 0.375rem; /* 6px if base is 16px */
+  --spacing-unit: 8px;
+  --font-family-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+body { /* Already in index.css, but good to keep in mind for global theme */
+  font-family: var(--font-family-sans-serif);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.page-container {
+  max-width: 900px; /* Default max-width, can be overridden */
+  margin: calc(var(--spacing-unit) * 2) auto; /* 16px auto */
+  padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 3); /* 16px 24px */
+}
+
+.page-title {
+  text-align: center;
+  color: var(--dark-color);
+  margin-bottom: calc(var(--spacing-unit) * 3); /* 24px */
+  font-size: 2rem; /* 32px */
+  font-weight: 600;
+}
+
+/* === Buttons === */
+.button {
+  display: inline-block;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #fff; /* Default text color for colored buttons */
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.5); /* 6px 12px */
+  font-size: 1rem; /* 16px */
+  border-radius: var(--border-radius-base);
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.button:hover {
+  text-decoration: none;
+}
+.button:disabled, .button.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+.button-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+  color: #fff;
+}
+
+.button-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: #fff;
+}
+.button-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+  color: #fff;
+}
+
+.button-success {
+  background-color: var(--success-color);
+  border-color: var(--success-color);
+  color: #fff;
+}
+.button-success:hover {
+  background-color: #1e7e34;
+  border-color: #1c7430;
+  color: #fff;
+}
+
+.button-danger {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+  color: #fff;
+}
+.button-danger:hover {
+  background-color: #bd2130;
+  border-color: #b21f2d;
+  color: #fff;
+}
+
+.button-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+.button-outline-primary:hover {
+  color: #fff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.button-lg {
+  padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 2); /* 8px 16px */
+  font-size: 1.25rem; /* 20px */
+}
+
+.button-sm {
+  padding: calc(var(--spacing-unit) * 0.5) calc(var(--spacing-unit) * 1); /* 4px 8px */
+  font-size: 0.875rem; /* 14px */
+}
+
+.button-block {
+  display: block;
+  width: 100%;
+}
+
+/* === Cards === */
+.card {
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  margin-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+  padding: calc(var(--spacing-unit) * 2) calc(var(--spacing-unit) * 2.5); /* 16px 20px */
+}
+.card-header, .card-title { /* card-title often used as h2/h3 inside card */
+  font-size: 1.5rem; /* 24px */
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: calc(var(--spacing-unit) * 1.5); /* 12px */
+  padding-bottom: calc(var(--spacing-unit) * 1); /* 8px */
+  border-bottom: 1px solid var(--border-color);
+}
+.card-body { /* If explicit body needed, otherwise padding on .card is fine */
+  /* padding: usually padding is on .card itself */
+}
+
+
+/* === Forms === */
+.form-group {
+  margin-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+}
+.form-group label {
+  display: block;
+  margin-bottom: calc(var(--spacing-unit) * 0.5); /* 4px */
+  font-weight: 600;
+  color: var(--text-muted-color);
+}
+.form-control { /* Apply to input, select, textarea */
+  display: block;
+  width: 100%;
+  padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.25); /* 6px 10px */
+  font-size: 1rem; /* 16px */
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da; /* Slightly different from var(--border-color) for more emphasis */
+  appearance: none; /* Remove default styling */
+  border-radius: var(--border-radius-base);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+.form-control:focus {
+  color: var(--text-color);
+  background-color: #fff;
+  border-color: #86b7fe; /* Light blue focus, similar to Bootstrap */
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.form-control[type="date"] { /* Specific styling might be needed if default date looks bad */
+  /* appearance: auto; */ /* Sometimes needed for date input to show picker */
+}
+.form-control::placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+.form-control:disabled, .form-control[readonly] {
+  background-color: #e9ecef;
+  opacity: 1;
+  cursor: not-allowed;
+}
+.form-text {
+  margin-top: calc(var(--spacing-unit) * 0.25); /* 2px */
+  font-size: 0.875em; /* Relative to parent */
+  color: var(--text-muted-color);
+}
+
+/* === Alerts / Messages === */
+.alert {
+  position: relative;
+  padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 1.25); /* 8px 10px */
+  margin-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-base);
+  text-align: center;
+}
+.alert-success {
+  color: #0f5132;
+  background-color: #d1e7dd;
+  border-color: #badbcc;
+}
+.alert-danger {
+  color: #842029;
+  background-color: #f8d7da;
+  border-color: #f5c2c7;
+}
+.alert-info {
+  color: #055160;
+  background-color: #cff4fc;
+  border-color: #b6effb;
+}
+.loading-message {
+  composes: alert alert-info; /* Use composes if CSS modules, otherwise just use .alert.alert-info */
+  font-style: italic;
+}
+.error-message { /* Specific error message styling if different from alert-danger */
+   composes: alert alert-danger;
+}
+
+
+/* === Hero Section (already exists, minor review) === */
 .hero-section {
-  background-color: #007bff; /* Primary blue, adjust as needed */
+  background-color: var(--primary-color); 
   color: white;
-  padding: 3rem 2rem;
+  padding: calc(var(--spacing-unit) * 4) calc(var(--spacing-unit) * 2); /* 32px 16px */
   text-align: center;
 }
 
-.hero-section h2 {
+.hero-section h2 { /* This is specific to hero, not a global .page-title */
   font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: calc(var(--spacing-unit) * 0.5); /* 4px */
 }
 
 .hero-section p {
@@ -80,16 +319,123 @@ main {
   font-size: 0.9rem;
 }
 
-/* Responsive adjustments if necessary */
+/* === Global Responsive Adjustments === */
 @media (max-width: 768px) {
+  body {
+    line-height: 1.5; /* Slightly reduce line height on mobile for better density */
+  }
+  .page-container {
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
+    margin-top: var(--spacing-unit);
+    margin-bottom: var(--spacing-unit);
+  }
+  .page-title {
+    font-size: 1.75rem; /* 28px */
+    margin-bottom: var(--spacing-unit) * 2; /* 16px */
+  }
+  .card-title {
+    font-size: 1.3rem; /* ~21px */
+    margin-bottom: var(--spacing-unit); /* 8px */
+    padding-bottom: var(--spacing-unit) * 0.75; /* 6px */
+  }
+  .button { /* Make buttons slightly smaller on mobile */
+    padding: calc(var(--spacing-unit) * 0.65) calc(var(--spacing-unit) * 1.25); /* ~5px 10px */
+    font-size: 0.9rem;
+  }
+  .button-lg { /* Adjust large buttons too */
+    padding: calc(var(--spacing-unit) * 0.85) calc(var(--spacing-unit) * 1.5);
+    font-size: 1.1rem;
+  }
+
+  /* Hero Section adjustments (already existed, ensure they use variables) */
+  .hero-section {
+    padding: calc(var(--spacing-unit) * 3) var(--spacing-unit); /* 24px 8px */
+  }
   .hero-section h2 {
-    font-size: 2rem;
+    font-size: 2rem; /* 32px */
   }
   .hero-section p {
-    font-size: 1rem;
+    font-size: 1rem; /* 16px */
   }
-  .cta-button {
-    padding: 0.6rem 1.2rem;
-    font-size: 1rem;
+  .cta-button { /* This is a specific button, not using global .button */
+    padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.5); /* 6px 12px */
+    font-size: 1rem; /* 16px */
   }
+}
+
+@media (max-width: 480px) { /* Even smaller screens */
+  .page-title {
+    font-size: 1.5rem; /* 24px */
+  }
+  .card-title {
+    font-size: 1.15rem; /* ~18px */
+  }
+  .form-control { /* Make form controls a bit smaller */
+    padding: calc(var(--spacing-unit) * 0.65) var(--spacing-unit);
+    font-size: 0.9rem;
+  }
+}
+
+/* === Review Mode Styles (Common for Practice & Test Review) === */
+.review-mode-area.card { /* The main container for review, styled as a card */
+  margin-top: var(--spacing-unit) * 2;
+}
+.review-mode-area .card-title { /* Title like "Reviewing Question X of Y" */
+  /* Uses global .card-title, specific overrides if needed */
+  text-align: center; /* Center review title */
+}
+
+.review-options .option-button.disabled-option {
+  opacity: 1; /* Ensure they are fully visible, not dimmed by global disabled style */
+  cursor: default; /* Not clickable */
+  /* Base styling from .button .option-button is applied */
+}
+
+.review-options .option-button.review-correct-answer {
+  border-color: var(--success-color);
+  background-color: #e6ffed; /* Very light green */
+}
+.review-options .option-button.review-user-incorrect {
+  border-color: var(--danger-color);
+  background-color: #ffeeee; /* Very light red */
+  box-shadow: 0 0 0 2px var(--danger-color) inset; /* Inner shadow for user's wrong pick */
+}
+.review-options .option-button.review-user-correct {
+  border-color: var(--success-color);
+  background-color: #e6ffed; /* Light green, same as correct-answer */
+  box-shadow: 0 0 0 2px var(--success-color) inset; /* Inner shadow for user's correct pick */
+}
+
+.review-options .feedback-icon {
+  margin-left: var(--spacing-unit);
+  font-weight: bold;
+}
+.review-options .review-correct-answer .feedback-icon {
+  color: var(--success-color);
+}
+.review-options .review-user-incorrect .feedback-icon {
+  color: var(--danger-color);
+}
+.review-options .review-user-correct .feedback-icon {
+  color: var(--success-color);
+}
+
+
+.review-explanation { /* Specific class for explanation in review mode */
+  margin-top: var(--spacing-unit) * 2;
+  padding: var(--spacing-unit) * 1.5;
+  background-color: var(--light-color); 
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+}
+.review-explanation h4 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-unit);
+  color: var(--primary-color); /* Or a neutral dark color */
+  font-size: 1.1rem;
+}
+.review-explanation p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-color);
 }

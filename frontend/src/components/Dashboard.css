@@ -1,91 +1,133 @@
+/* Dashboard.css */
 .dashboard-container {
-  padding: 2rem;
-  background-color: #f4f7f6; /* Light neutral background for the dashboard */
-  min-height: calc(100vh - 60px - 40px); /* Full height minus header and footer approx */
+  background-color: var(--light-color); /* Use CSS variable */
+  min-height: calc(100vh - 60px - 40px); /* Approx header/footer, adjust if needed */
+  /* padding from .page-container is already applied */
 }
 
 .dashboard-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: calc(var(--spacing-unit) * 3); /* 24px */
+  padding-bottom: calc(var(--spacing-unit) * 1.5); /* 12px */
+  border-bottom: 1px solid var(--border-color);
 }
 
-.dashboard-header h1 {
-  font-size: 2.2rem;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
+/* .dashboard-header h1 is now .page-title, styled in App.css */
+/* Inline style in JSX handles text-align:left and specific margin-bottom for welcome message */
 
 .test-date-reminder {
   font-size: 1rem;
-  color: #555;
-  background-color: #e9f5ff;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  color: var(--text-muted-color);
+  background-color: #e9f5ff; /* Consider making this a variable if used elsewhere */
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
+  border-radius: var(--border-radius-base);
   display: inline-block;
-  border: 1px solid #cce4ff;
+  border: 1px solid #cce4ff; /* Corresponds to bg color */
+  margin-top: var(--spacing-unit); /* Add some space below the welcome title */
 }
 
-.dashboard-section {
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
+.dashboard-section { /* This class is now combined with .card */
+  /* Specific dashboard section overrides if .card base isn't enough */
+  /* margin-bottom is handled by .card */
 }
 
-.dashboard-section h2 {
-  font-size: 1.5rem;
-  color: #007bff; /* Using a primary color for section titles */
-  margin-top: 0;
-  margin-bottom: 1rem;
+/* .dashboard-section h2 is now .card-title, styled in App.css */
+
+.study-plan-placeholder.alert.alert-info { /* Placeholder styling if it's an alert */
+  /* text-align: center; */ /* Already in .alert */
+  /* font-style: italic; */ /* Add if desired for placeholder text */
+}
+.study-plan-placeholder p { /* If not using alert, or to style p inside alert */
+   margin-bottom: 0; /* Remove default p margin if it's the only content */
 }
 
-.study-plan-placeholder {
-  background-color: #eef1f3;
-  padding: 2rem;
-  border-radius: 6px;
-  text-align: center;
-  color: #777;
-  font-style: italic;
-  border: 1px dashed #d0d7de;
-}
 
 .practice-section p {
   font-size: 1rem;
-  color: #444;
-  margin-bottom: 1rem;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
 }
 
-.ai-practice-button {
-  background-color: #28a745; /* Green color for call to action */
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: bold;
-  border-radius: 5px;
+/* .ai-practice-button uses global .button .button-success */
+.ai-practice-button { /* Add any specific overrides for this particular button if needed */
+  /* e.g. display: block; width: auto; margin-top: var(--spacing-unit); */
+}
+
+
+/* AI Suggested Study Plan Display Styles */
+/* .loading-message, .error-message are global from App.css */
+
+.calendar-plan-display {
+  margin-top: var(--spacing-unit) * 1.5; /* 12px */
+}
+
+.calendar-day {
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+  padding-bottom: var(--spacing-unit) * 1.5; /* 12px */
+  border-bottom: 1px solid var(--border-color);
+}
+.calendar-day:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.calendar-day h3 { /* This is not a .card-title, so style it here */
+  font-size: 1.3rem; /* 20.8px */
+  color: var(--primary-color); 
+  margin-top: 0; /* Reset if inside a card that adds padding */
+  margin-bottom: var(--spacing-unit); /* 8px */
+}
+
+.tasks-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
+  border-radius: var(--border-radius-base);
+  background-color: var(--light-color);
+  border: 1px solid transparent; /* For smooth hover transition */
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.ai-practice-button:hover {
-  background-color: #218838; /* Darker green on hover */
+.task-item:hover {
+  background-color: #e9ecef; /* Slightly darker hover */
+  border-color: #ced4da;
 }
+
+.task-checkbox {
+  margin-right: var(--spacing-unit); /* 8px */
+  font-size: 1.1rem; 
+  color: var(--text-muted-color);
+}
+
+.task-description {
+  font-size: 0.95rem;
+  color: var(--text-color);
+}
+
 
 /* Basic responsive adjustments */
 @media (max-width: 768px) {
-  .dashboard-container {
-    padding: 1rem;
+  /* .dashboard-container padding is handled by .page-container media query if added */
+  
+  .dashboard-header .page-title { /* Welcome message */
+    font-size: 1.6rem; /* Adjust from global .page-title if needed */
   }
-  .dashboard-header h1 {
-    font-size: 1.8rem;
+
+  .dashboard-section.card .card-title { /* Section titles */
+    font-size: 1.2rem; /* Adjust from global .card-title if needed */
   }
-  .dashboard-section h2 {
-    font-size: 1.3rem;
-  }
-  .ai-practice-button {
+
+  .ai-practice-button.button.button-success { /* Ensure block display on mobile if not already */
+    display: block;
     width: 100%;
-    padding: 0.8rem;
+  }
+  .calendar-day h3 {
+    font-size: 1.15rem;
   }
 }

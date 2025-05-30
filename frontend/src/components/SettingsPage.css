@@ -1,0 +1,37 @@
+/* SettingsPage.css */
+.settings-page-container.page-container { /* Specific max-width for settings page if different */
+  max-width: 700px; 
+}
+
+.settings-page-container .card {
+  /* Additional padding or specific styles for the card containing the form, if needed */
+  /* padding: var(--spacing-unit) * 3; */ /* e.g., 24px */
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit) * 1.5; /* 12px, reduced from 1.5rem as form-group has its own margin */
+}
+
+/* .form-group, .form-group label, .form-control, .form-text are global */
+
+/* Styles for the save button if specific alignment or margin is needed */
+.settings-form .button.button-success {
+  margin-top: var(--spacing-unit); /* 8px */
+  align-self: flex-start; 
+}
+
+/* .save-message (now .alert .alert-success) is global */
+.save-message { /* Keep if you need to override margin or specific text properties */
+   margin-top: var(--spacing-unit) * 2; /* 16px */
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .settings-form .button.button-success {
+    width: 100%; 
+    align-self: stretch; /* Ensure it stretches if it was flex-start */
+  }
+}

@@ -1,72 +1,164 @@
+/* TestPage.css */
+/* Keep only styles specific to TestPage that are not covered by App.css */
+
 .test-page-container {
-  padding: 2rem;
-  max-width: 700px; /* Slightly narrower than practice page for simplicity */
+  /* Example: If TestPage needs a different max-width than default page-container */
+  /* max-width: 700px; */ 
+}
+
+/* Styles for elements within the card (if any specific overrides are needed) */
+.test-page-container .card .form-group { /* Example of more specific selector if needed */
+  /* margin-bottom: var(--spacing-unit) * 1.5; */ /* e.g. 12px if different from global form-group */
+}
+
+.question-display-area {
+  /* Specific styles for when questions are shown, if any beyond card structure */
+}
+
+.session-info.card { /* session-info is now a card */
+  flex-direction: row; /* Ensure items are side-by-side */
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+}
+
+.timer, .question-counter {
+  font-size: 1rem; 
+  color: var(--text-color);
+  font-weight: bold;
+}
+
+.question-text { /* This is inside .question-content.card */
+  font-size: 1.15rem; 
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+  line-height: 1.6;
+}
+
+.question-text p {
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
+}
+
+.visual-asset {
+  margin: var(--spacing-unit) * 1.5 0; /* 12px */
+  padding: var(--spacing-unit) * 1.5;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  background-color: var(--light-color);
+  overflow-x: auto;
+}
+
+.latex-asset {
+  font-size: 1.2rem;
+}
+
+.svg-asset svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
   margin: 0 auto;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
-.page-title {
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+}
+
+/* Specific styling for option buttons beyond base .button */
+.option-button { /* This is a .button, so these are overrides/additions */
+  text-align: left;
+  background-color: var(--light-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+  font-weight: normal; /* Override .button bold if needed */
+  padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 1.25); /* 8px 10px */
+  font-size: 1.05rem; 
+}
+.option-button:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+  color: var(--text-color);
+}
+
+/* Feedback states for option buttons - these are highly specific */
+.option-button.selected {
+  border-width: 2px; 
+  font-weight: bold; 
+}
+.option-button.correct, 
+.option-button.correct-unselected {
+  background-color: #d1e7dd; /* alert-success bg */
+  border-color: #badbcc;   /* alert-success border */
+  color: #0f5132;        /* alert-success text */
+}
+.option-button.selected.correct {
+  border-color: #0f5132; 
+}
+.option-button.incorrect {
+  background-color: #f8d7da; /* alert-danger bg */
+  border-color: #f5c2c7;   /* alert-danger border */
+  color: #842029;        /* alert-danger text */
+}
+.option-button.selected.incorrect {
+   border-color: #842029; 
+}
+.option-button:disabled:not(.selected):not(.correct-unselected) { 
+  background-color: var(--light-color); 
+  border-color: var(--border-color);
+  color: var(--text-muted-color);
+  opacity: 0.7;
+}
+
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+}
+
+/* Specific styling for stop-test-button if not fully covered by .button-danger */
+.stop-test-button { 
+  /* .button .button-danger .button-block covers most of it */
+}
+
+/* Results Screen */
+.results-screen { /* Contained within .page-container .test-page-container */
   text-align: center;
-  color: #333;
-  margin-bottom: 2rem;
-  font-size: 2rem;
 }
-
-.selection-group {
-  margin-bottom: 1.5rem;
+/* .results-screen .page-title is global */
+.results-score {
+  font-size: 1.5rem;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
 }
-
-.selection-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  color: #555;
-}
-
-.selection-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  background-color: #f9f9f9;
-}
-
-.start-test-button {
-  display: block;
-  width: 100%;
-  padding: 1rem;
-  background-color: #007bff; /* Blue for starting tests */
-  color: white;
-  border: none;
-  border-radius: 5px;
+.results-time {
   font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 2rem;
-  transition: background-color 0.3s ease;
+  color: var(--text-muted-color);
+  margin-bottom: var(--spacing-unit) * 3; /* 24px */
+}
+.results-actions {
+  display: flex;
+  flex-wrap: wrap; 
+  justify-content: center;
+  gap: var(--spacing-unit) * 1.5; /* 12px */
+}
+.results-actions .button { /* Global button styles apply */
+  min-width: 160px; 
 }
 
-.start-test-button:hover {
-  background-color: #0056b3; /* Darker blue */
-}
-
-.start-test-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .test-page-container {
-    padding: 1rem;
+  .test-page-container .card {
+     padding: var(--spacing-unit) * 1.5;
   }
-  .page-title {
-    font-size: 1.5rem;
+  .session-info.card {
+    flex-direction: column;
+    align-items: flex-start;
   }
-  .start-test-button {
+  .option-button {
     font-size: 1rem;
+    padding: var(--spacing-unit) * 0.75 var(--spacing-unit);
   }
 }

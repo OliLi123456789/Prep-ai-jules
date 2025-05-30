@@ -1,0 +1,113 @@
+/* AITutorPage.css */
+.ai-tutor-page-container.page-container {
+  max-width: 800px; /* Or your preferred max width for chat */
+}
+
+.chat-card {
+  /* .card global styles are applied */
+  padding: 0; /* Override card padding to have messages flush to edges if desired, or keep for internal padding */
+  display: flex;
+  flex-direction: column;
+  height: calc(80vh - var(--spacing-unit) * 4); /* Example height, adjust as needed, considering header/footer */
+  max-height: 700px; /* Max height for very tall screens */
+}
+
+.chat-messages-area {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-unit) * 2; /* 16px */
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit) * 1.5; /* 12px between messages */
+}
+
+.chat-message {
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
+  border-radius: calc(var(--border-radius-base) * 2); /* More rounded bubbles */
+  max-width: 75%;
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
+.chat-message.user {
+  background-color: var(--primary-color);
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: var(--spacing-unit) * 0.5; /* Flat edge for user bubble */
+}
+
+.chat-message.ai {
+  background-color: var(--light-color);
+  color: var(--text-color);
+  align-self: flex-start;
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: var(--spacing-unit) * 0.5; /* Flat edge for AI bubble */
+}
+
+.chat-message .message-text {
+  margin: 0;
+  white-space: pre-wrap; /* Preserve line breaks from AI response */
+}
+
+.typing-indicator {
+  text-align: center;
+  padding: var(--spacing-unit); /* 8px */
+  color: var(--text-muted-color);
+  font-style: italic;
+}
+
+.chat-error.error-message { /* Specific styling for chat error if needed */
+  /* Global .error-message styles apply, this is for overrides */
+  margin: var(--spacing-unit) * 2; /* Add margin if it's inside the card padding area */
+  padding: var(--spacing-unit) * 1.5;
+}
+
+.chat-input-form {
+  display: flex;
+  padding: var(--spacing-unit) * 2; /* 16px */
+  border-top: 1px solid var(--border-color);
+  background-color: #fff; /* Ensure it's on top of messages area bg if different */
+}
+
+.chat-input.form-control {
+  flex-grow: 1;
+  margin-right: var(--spacing-unit); /* 8px */
+  resize: none; /* If it were a textarea */
+}
+
+.send-button.button {
+  /* Global button styles apply */
+  white-space: nowrap; /* Prevent "Send" from wrapping */
+}
+
+/* Responsive adjustments for chat */
+@media (max-width: 768px) {
+  .chat-card {
+    height: calc(90vh - var(--spacing-unit) * 4); /* Take more height on mobile */
+  }
+  .chat-message {
+    max-width: 85%;
+  }
+  .chat-input-form {
+    padding: var(--spacing-unit) * 1.5; /* 12px */
+  }
+}
+
+@media (max-width: 480px) {
+    .chat-messages-area {
+        padding: var(--spacing-unit) * 1.5; /* 12px */
+    }
+     .chat-message {
+        padding: calc(var(--spacing-unit)*0.75) var(--spacing-unit) ; /* 6px 8px */
+        font-size: 0.95rem;
+    }
+    .chat-input-form {
+        padding: var(--spacing-unit); /* 8px */
+    }
+    .chat-input.form-control {
+        padding: calc(var(--spacing-unit) * 0.75); /* 6px */
+    }
+    .send-button.button {
+        padding: calc(var(--spacing-unit) * 0.75); /* 6px */
+    }
+}

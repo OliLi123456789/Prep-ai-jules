@@ -1,118 +1,30 @@
+/* PracticePage.css */
+/* Keep only styles specific to PracticePage that are not covered by App.css */
+
 .practice-page-container {
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  /* Specific container adjustments if needed, else remove if page-container from App.css is sufficient */
+  /* max-width: 800px; /* Example: If PracticePage needs a different max-width than default page-container */
 }
 
-.page-title {
-  text-align: center;
-  color: #333;
-  margin-bottom: 2rem;
-  font-size: 2rem;
-}
-
-.selection-group {
-  margin-bottom: 1.5rem;
-}
-
-.selection-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  color: #555;
-}
-
-.selection-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-  background-color: #f9f9f9;
-}
-
-.selection-group select:disabled {
-  background-color: #e9ecef;
-  cursor: not-allowed;
+.error-container .button.button-primary { /* Example of overriding if needed */
+  /* display: block; */ /* Already handled by button-block if used, or can be specific here */
+  /* margin: calc(var(--spacing-unit) * 2) auto 0; */
 }
 
 .question-buttons {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  gap: var(--spacing-unit); /* 8px */
+  margin-top: var(--spacing-unit);
 }
 
-.question-buttons button {
-  flex-grow: 1;
-  padding: 0.75rem;
-  border: 1px solid #007bff;
-  background-color: white;
-  color: #007bff;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.question-buttons button:hover {
-  background-color: #e6f2ff;
-}
-
-.question-buttons button.active {
-  background-color: #007bff;
+/* Specific styling for active state of question number buttons */
+.question-buttons .button.button-outline-primary.active {
+  background-color: var(--primary-color);
   color: white;
 }
-
-.start-practice-button {
-  display: block;
-  width: 100%;
-  padding: 1rem;
-  background-color: #28a745; /* Green */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 2rem;
-  transition: background-color 0.3s ease;
-}
-
-.start-practice-button:hover {
-  background-color: #218838; /* Darker green */
-}
-
-.start-practice-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.loading-message,
-.error-message {
-  text-align: center;
-  font-size: 1.2rem;
-  padding: 2rem;
-}
-
-.error-message {
-  color: #D8000C; /* Red for errors */
-  background-color: #FFD2D2; /* Light red background */
-  border: 1px solid #D8000C;
-  border-radius: 4px;
-}
-
-.error-container .return-button {
-  display: block;
-  margin: 1rem auto 0;
-  padding: 0.75rem 1.5rem;
-}
-
 
 .question-display-area {
-  /* Styles for when questions are shown */
+  /* Styles for when questions are shown, if any beyond card structure */
 }
 
 .question-counter {
@@ -129,241 +41,167 @@
 }
 
 .question-text p {
-  margin-bottom: 0.5rem; /* Space between question text and visual asset if any */
+  margin-bottom: var(--spacing-unit) * 0.5; /* Space between question text and visual asset if any */
 }
 
 .visual-asset {
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  background-color: #f9f9f9;
-  overflow-x: auto; /* For wide SVGs or LaTeX */
+  margin: var(--spacing-unit) * 1.5 0; /* 12px */
+  padding: var(--spacing-unit) * 1.5;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  background-color: var(--light-color);
+  overflow-x: auto;
 }
 
 .latex-asset {
-  font-size: 1.2rem; /* Adjust KaTeX sizing if needed */
+  font-size: 1.2rem; 
 }
 
 .svg-asset svg {
-  max-width: 100%; /* Ensure SVG scales down if too large */
-  height: auto;   /* Maintain aspect ratio */
+  max-width: 100%; 
+  height: auto;   
   display: block;
-  margin: 0 auto; /* Center SVG if it's smaller than container */
+  margin: 0 auto; 
 }
-
 
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
 }
 
+/* Specific styling for option buttons beyond base .button */
 .option-button {
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  background-color: #f9f9f9;
-  color: #333;
-  border-radius: 4px;
-  cursor: pointer;
   text-align: left;
-  font-size: 1rem;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  background-color: var(--light-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+  font-weight: normal; /* Override .button bold if needed */
 }
-
 .option-button:hover {
-  background-color: #e9e9e9;
-  border-color: #ccc;
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+  color: var(--text-color);
 }
 
 .navigation-buttons {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
 }
 
-.navigation-buttons button,
-.return-button {
-  padding: 0.6rem 1.2rem;
-  border: 1px solid #007bff;
-  background-color: white;
-  color: #007bff;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* Specific styling for stop-practice-button if not fully covered by .button-danger */
+.stop-practice-button { 
+  /* .button .button-danger .button-block covers most of it */
 }
-
-.navigation-buttons button:hover,
-.return-button:hover {
-  background-color: #007bff;
-  color: white;
-}
-
-.navigation-buttons button:disabled {
-  background-color: #e9ecef;
-  color: #6c757d;
-  border-color: #ced4da;
-  cursor: not-allowed;
-}
-
-.return-button.full-width-button {
-    display: block;
-    width: 100%;
-    margin-top: 1.5rem;
-    background-color: #6c757d; /* Secondary/neutral color */
-    color: white;
-    border-color: #6c757d;
-}
-.return-button.full-width-button:hover {
-    background-color: #5a6268;
-    border-color: #545b62;
-}
-
-.stop-practice-button { /* Specifically for the button when in practice mode */
-    background-color: #dc3545; /* Red color for stop/danger */
-    border-color: #dc3545;
-    color: white;
-}
-.stop-practice-button:hover {
-    background-color: #c82333;
-    border-color: #bd2130;
-}
-
 
 /* Session Info Bar */
-.session-info {
-  display: flex;
+.session-info.card { /* session-info is now a card */
+  flex-direction: row; /* Ensure items are side-by-side */
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  border: 1px solid #e9ecef;
+  padding: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit);
 }
 
-.timer, .question-counter { /* .question-counter was already there, ensure it fits */
+.timer, .question-counter { 
   font-size: 0.95rem;
-  color: #333;
+  color: var(--text-color);
   font-weight: bold;
 }
 
 .target-time-info {
   text-align: center;
   font-size: 0.85rem;
-  color: #666;
-  margin-bottom: 1.5rem;
+  color: var(--text-muted-color);
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
 }
 
-/* Option Button Feedback States */
+/* Option Button Feedback States - these are highly specific */
 .option-button.selected {
-  border-width: 2px;
-  font-weight: bold;
+  border-width: 2px; /* Keep this specific */
+  font-weight: bold; /* Keep this specific */
 }
-.option-button.correct, .option-button.correct-unselected {
-  background-color: #d4edda; /* Light green */
-  border-color: #c3e6cb;
-  color: #155724; /* Dark green */
+.option-button.correct, 
+.option-button.correct-unselected {
+  background-color: #d1e7dd; /* alert-success bg */
+  border-color: #badbcc;   /* alert-success border */
+  color: #0f5132;        /* alert-success text */
 }
 .option-button.selected.correct {
-  border-color: #155724; 
+  border-color: #0f5132; /* Darker border for selected correct */
 }
 .option-button.incorrect {
-  background-color: #f8d7da; /* Light red */
-  border-color: #f5c6cb;
-  color: #721c24; /* Dark red */
+  background-color: #f8d7da; /* alert-danger bg */
+  border-color: #f5c2c7;   /* alert-danger border */
+  color: #842029;        /* alert-danger text */
 }
 .option-button.selected.incorrect {
-   border-color: #721c24;
+   border-color: #842029; /* Darker border for selected incorrect */
 }
-
-.option-button:disabled:not(.selected):not(.correct-unselected) { /* Keep disabled non-selected non-correct options neutral */
-  background-color: #f9f9f9;
-  border-color: #ddd;
-  color: #333;
+.option-button:disabled:not(.selected):not(.correct-unselected) { 
+  background-color: var(--light-color); /* Keep disabled non-selected non-correct options neutral but distinct */
+  border-color: var(--border-color);
+  color: var(--text-muted-color);
   opacity: 0.7;
 }
 
-
 /* Explanation Area */
 .explanation-area {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background-color: #e9f7fd; /* Light blue background */
-  border: 1px solid #d0eaf9;
-  border-radius: 4px;
+  margin-top: var(--spacing-unit) * 2; /* 16px */
+  padding: var(--spacing-unit) * 1.5; /* 12px */
+  background-color: #cff4fc; /* alert-info bg */
+  border: 1px solid #b6effb;   /* alert-info border */
+  border-radius: var(--border-radius-base);
 }
 .explanation-area h4 {
   margin-top: 0;
-  margin-bottom: 0.5rem;
-  color: #004085; /* Darker blue for heading */
+  margin-bottom: var(--spacing-unit); /* 8px */
+  color: #055160; /* alert-info text */
+  font-size: 1.1rem;
 }
 .explanation-area p {
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #31708f; /* Medium blue for text */
+  color: #055160; /* alert-info text */
 }
 
 /* Results Screen */
 .results-screen {
   text-align: center;
 }
-.results-screen .page-title {
-  margin-bottom: 1rem;
+.results-screen .page-title { /* Already global */
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
 }
 .results-score {
   font-size: 1.5rem;
-  color: #333;
-  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
 }
 .results-time {
   font-size: 1.1rem;
-  color: #555;
-  margin-bottom: 2rem;
+  color: var(--text-muted-color);
+  margin-bottom: var(--spacing-unit) * 3; /* 24px */
 }
 .results-actions {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: var(--spacing-unit) * 1.5; /* 12px */
 }
-.results-actions .action-button {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  border: none;
-  font-weight: bold;
-}
-.results-actions .action-button:first-child { /* Practice Again */
-  background-color: #007bff;
-  color: white;
-}
-.results-actions .action-button:first-child:hover {
-  background-color: #0056b3;
-}
-.results-actions .action-button.secondary { /* Back to Dashboard */
-  background-color: #6c757d;
-  color: white;
-}
-.results-actions .action-button.secondary:hover {
-  background-color: #5a6268;
-}
+/* .results-actions .button styles are covered by global .button and variants */
 
 
 /* Responsive adjustments */
 @media (max-width: 600px) {
-  .practice-page-container {
-    padding: 1rem;
-  }
-  .page-title {
-    font-size: 1.5rem;
+  .practice-page-container .card { /* Reduce padding in cards on small screens */
+    padding: var(--spacing-unit) * 1.5;
   }
   .question-buttons {
     flex-direction: column;
   }
-  .start-practice-button {
-    font-size: 1rem;
+  .session-info.card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

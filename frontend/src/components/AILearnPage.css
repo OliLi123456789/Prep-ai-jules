@@ -1,0 +1,167 @@
+/* AILearnPage.css */
+.ai-learn-page-container.page-container {
+  max-width: 900px; /* Or your preferred width for content-heavy pages */
+}
+
+.selection-area.card {
+  margin-bottom: var(--spacing-unit) * 3; /* 24px */
+}
+
+.selection-area .card-title {
+  text-align: center; /* Center title for selection card */
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-unit) * 2; /* 16px */
+  margin-bottom: var(--spacing-unit) * 2;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 200px; /* Ensure dropdowns don't get too squished */
+  margin-bottom: 0; /* Remove default form-group margin as gap is used in form-row */
+}
+
+.load-module-button.button {
+  display: block; /* Make button take available width if needed, or center it */
+  margin: 0 auto; /* Center the button */
+}
+
+.learning-module.card {
+  /* Styles for the card displaying the entire loaded module */
+}
+
+.module-title.card-title { /* Title of the loaded module */
+  text-align: center;
+  color: var(--success-color); /* Differentiate module title color */
+}
+
+.module-section {
+  margin-bottom: var(--spacing-unit) * 2.5; /* 20px */
+  padding-bottom: var(--spacing-unit) * 1.5; /* 12px */
+  border-bottom: 1px solid var(--border-color);
+}
+.module-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.module-section h3 { /* Sub-headings within the module like Introduction, Key Concepts */
+  font-size: 1.4rem;
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+}
+
+.key-concept {
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+  padding: var(--spacing-unit) * 1.5; /* 12px */
+  background-color: var(--light-color);
+  border-radius: var(--border-radius-base);
+  border: 1px solid #e0e0e0; /* Slightly softer border */
+}
+.key-concept h4 {
+  font-size: 1.15rem;
+  color: var(--dark-color);
+  margin-top: 0;
+  margin-bottom: var(--spacing-unit) * 0.75; /* 6px */
+}
+.key-concept .concept-explanation,
+.key-concept .concept-example {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
+}
+.key-concept .concept-example {
+  font-style: italic;
+  color: var(--text-muted-color);
+}
+
+
+.practice-questions-section .practice-question-item {
+  margin-bottom: var(--spacing-unit) * 2.5; /* 20px */
+  padding-bottom: var(--spacing-unit) * 1.5;
+  border-bottom: 1px dashed var(--border-color); /* Dashed for individual questions */
+}
+.practice-questions-section .practice-question-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pq-text {
+  font-size: 1.05rem;
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+}
+
+.pq-options.options-list { /* Inherits from global .options-list */
+  gap: var(--spacing-unit) * 0.75; /* 6px gap for practice question options */
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+}
+
+.pq-option.option-button { /* Inherits from global .button .option-button */
+  /* Any specific overrides for practice question options */
+  font-size: 0.95rem;
+}
+
+/* Feedback styles for practice questions - similar to review mode but might be simpler */
+.pq-option.selected:not(.correct):not(.incorrect) { /* Just selected, before checking */
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+.pq-option.correct {
+  background-color: #d1e7dd; /* alert-success bg */
+  border-color: #badbcc;
+  color: #0f5132;
+}
+.pq-option.incorrect {
+  background-color: #f8d7da; /* alert-danger bg */
+  border-color: #f5c2c7;
+  color: #842029;
+}
+.pq-option.correct-unselected { /* If showing correct answer when user was wrong */
+    /* Similar to .correct, but maybe less prominent if user didn't pick it */
+    /* For now, let .correct handle it if it's revealed */
+}
+
+
+.check-answer-button.button {
+  margin-top: var(--spacing-unit); /* 8px */
+  display: inline-block; /* Not full width */
+}
+
+.pq-explanation.explanation-area { /* Inherits from global .explanation-area if that exists, or define here */
+  margin-top: var(--spacing-unit) * 1.5; /* 12px */
+  padding: var(--spacing-unit); /* 8px */
+  font-size: 0.9rem; /* Slightly smaller for pq explanations */
+}
+.pq-explanation p {
+    margin-bottom: var(--spacing-unit) * 0.5;
+}
+.pq-explanation p:last-child {
+    margin-bottom: 0;
+}
+
+
+.summary-section p {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column; /* Stack dropdowns on smaller screens */
+    gap: var(--spacing-unit) * 1.5; /* Adjust gap for stacked layout */
+  }
+  .form-row .form-group {
+    min-width: 100%;
+  }
+  .module-section h3 {
+    font-size: 1.25rem;
+  }
+  .key-concept h4 {
+    font-size: 1.05rem;
+  }
+}

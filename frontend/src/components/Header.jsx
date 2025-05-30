@@ -41,31 +41,39 @@ const Header = ({ onLogin, onLogout, isLoggedIn }) => {
   return (
     <header className="app-header">
       <div className="header-left">
-        <button onClick={toggleTestType} className="toggle-button">
-          Switch to {testType === 'SAT' ? 'ACT' : 'SAT'}
+        {/* Using button-sm for a less prominent toggle button */}
+        <button 
+          onClick={toggleTestType} 
+          className="button button-sm toggle-button-custom" 
+          title={`Switch to ${testType === 'SAT' ? 'ACT' : 'SAT'} prep content`}
+        >
+          {testType === 'SAT' ? 'SAT' : 'ACT'} <span className="switch-icon">⇄</span>
         </button>
       </div>
       <div className="header-right">
         {isLoggedIn ? (
           <div className="user-menu-container" ref={dropdownRef}>
-            <button onClick={toggleDropdown} className="user-menu-button">
-              Menu {/* Or User Icon */}
+            <button onClick={toggleDropdown} className="button button-primary user-menu-button">
+              Menu <span className="dropdown-icon">▼</span>
             </button>
             {dropdownOpen && (
               <ul className="dropdown-menu">
-                <li><Link to="/dashboard" onClick={() => setDropdownOpen(false)}>Dashboard</Link></li>
-                <li><Link to="/practice" onClick={() => setDropdownOpen(false)}>Practice</Link></li>
-                <li><Link to="/tests" onClick={() => setDropdownOpen(false)}>Tests</Link></li>
-                {/* Placeholder button for Profile */}
-                <li><button onClick={() => handlePlaceholderClick('Profile')}>Profile</button></li>
-                <li><button onClick={handleLogoutClick}>Logout</button></li>
+                <li><Link to="/dashboard" className="button" onClick={() => setDropdownOpen(false)}>Dashboard</Link></li>
+                <li><Link to="/practice" className="button" onClick={() => setDropdownOpen(false)}>Practice</Link></li>
+                <li><Link to="/tests" className="button" onClick={() => setDropdownOpen(false)}>Tests</Link></li>
+                <li><Link to="/analytics" className="button" onClick={() => setDropdownOpen(false)}>Analytics</Link></li>
+                <li><Link to="/ai-learn" className="button" onClick={() => setDropdownOpen(false)}>AI Learn</Link></li>
+                <li><Link to="/ai-tutor" className="button" onClick={() => setDropdownOpen(false)}>AI Tutor</Link></li>
+                <li><hr className="dropdown-divider" /></li> {/* Optional divider */}
+                <li><Link to="/settings" className="button" onClick={() => setDropdownOpen(false)}>Settings</Link></li>
+                <li><button className="button" onClick={handleLogoutClick}>Logout</button></li>
               </ul>
             )}
           </div>
         ) : (
           <>
-            <button className="header-button">Try for Free</button>
-            <button className="header-button login-button" onClick={onLogin}>Log In</button>
+            <button className="button button-outline-primary header-button-custom">Try for Free</button>
+            <button className="button button-primary login-button-custom" onClick={onLogin}>Log In</button>
           </>
         )}
       </div>

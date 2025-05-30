@@ -9,11 +9,11 @@ const Testimonials = () => {
   ];
 
   return (
-    <section className="testimonials-section">
-      <h2>Student Progress</h2>
+    <section className="testimonials-section page-container"> {/* Use page-container for consistent padding/max-width */}
+      <h2 className="page-title">Student Progress</h2> {/* Use page-title */}
       <div className="testimonials-list">
         {testimonials.map(testimonial => (
-          <div key={testimonial.id} className="testimonial-item">
+          <div key={testimonial.id} className="testimonial-item card"> {/* Use card */}
             <p>"{testimonial.text}"</p>
           </div>
         ))}

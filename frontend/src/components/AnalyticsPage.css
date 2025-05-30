@@ -1,0 +1,94 @@
+/* AnalyticsPage.css */
+.analytics-page-container.page-container {
+  /* max-width: 900px; /* Already set in global .page-container if this is the default */
+  display: flex; /* Keep flex for overall page structure if needed beyond simple block flow */
+  flex-direction: column;
+  gap: var(--spacing-unit) * 2.5; /* 20px, was 2rem */
+}
+
+/* .page-title is global */
+/* .card is global, .card-title is global */
+
+/* Statistics Section */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); /* Slightly smaller min for more items */
+  gap: var(--spacing-unit) * 2; /* 16px */
+}
+
+.stat-item {
+  background-color: var(--light-color);
+  padding: var(--spacing-unit) * 1.5; /* 12px */
+  border-radius: var(--border-radius-base);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column; 
+  justify-content: center; 
+}
+
+.stat-label {
+  font-size: 0.95rem;
+  color: var(--text-muted-color);
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* Graph Section */
+.graph-placeholder {
+  width: 100%;
+  height: 300px; 
+  border: 2px dashed var(--border-color); /* Use variable */
+  border-radius: var(--border-radius-base);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background-color: var(--light-color);
+  color: var(--text-muted-color);
+  font-size: 1.1rem;
+  padding: var(--spacing-unit) * 2; /* Add some padding */
+}
+.graph-placeholder p:first-child {
+    font-weight: bold;
+    font-size: 1.3rem;
+    margin-bottom: var(--spacing-unit); /* 8px */
+}
+
+
+/* More Analytics Section */
+.more-analytics.card p { /* Target p within this specific card */
+    font-size: 1rem;
+    color: var(--text-muted-color); /* Use variable */
+    line-height: 1.6;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  /* .analytics-page-container.page-container padding is handled by global .page-container if it has media queries */
+  
+  /* .page-title font size is handled by global .page-title if it has media queries */
+  
+  /* .card .card-title font size is handled by global .card-title if it has media queries */
+
+  .stats-grid {
+    grid-template-columns: 1fr; 
+  }
+  .stat-value {
+    font-size: 1.2rem;
+  }
+  .graph-placeholder {
+    height: 250px; 
+    font-size: 1rem;
+  }
+   .graph-placeholder p:first-child {
+    font-size: 1.1rem;
+  }
+}

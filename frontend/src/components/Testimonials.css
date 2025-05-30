@@ -1,34 +1,38 @@
-.testimonials-section {
-  padding: 2rem;
-  text-align: center;
-  background-color: #f9f9f9;
+/* Testimonials.css */
+.testimonials-section.page-container {
+  /* padding: var(--spacing-unit) * 3; /* Global .page-container handles padding */
+  text-align: center; /* Keep this specific */
+  background-color: var(--light-color); /* Use variable */
 }
 
-.testimonials-section h2 {
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
-  color: #333;
+/* .testimonials-section h2 is now .page-title, styled in App.css */
+/* Overrides for .page-title specifically within .testimonials-section if needed: */
+.testimonials-section .page-title {
+  /* margin-bottom: var(--spacing-unit) * 2; */ /* Adjust if global .page-title margin is too much/little */
+  /* color: var(--text-color); */ /* If different from global .page-title color */
 }
 
 .testimonials-list {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-unit) * 2; /* 16px */
 }
 
-.testimonial-item {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
-  width: 80%;
-  max-width: 500px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.testimonial-item.card { /* testimonial-item now also has .card */
+  /* background-color, border, border-radius, box-shadow, padding are from .card */
+  width: 80%; /* Keep specific width */
+  max-width: 500px; /* Keep specific max-width */
+  text-align: left; /* Override card's default if needed, or ensure content centers itself */
+}
+.testimonial-item.card:last-child { /* Remove margin from last card item if global .card adds it */
+    margin-bottom: 0;
 }
 
-.testimonial-item p {
+
+.testimonial-item p { /* Styling for the text inside the testimonial card */
   font-size: 1.1rem;
-  color: #555;
-  margin: 0;
+  color: var(--text-muted-color); /* Use variable */
+  margin: 0; /* Keep if p tags inside have default margins */
+  font-style: italic; /* Add a bit of style */
 }

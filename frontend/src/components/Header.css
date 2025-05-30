@@ -1,100 +1,146 @@
+/* Header.css */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
+  padding: calc(var(--spacing-unit) * 1.5) calc(var(--spacing-unit) * 2.5); /* 12px 20px, was 8px vertical */
+  background-color: #fff; 
+  border-bottom: 1px solid var(--border-color);
+  min-height: 60px; 
 }
 
-.header-left .toggle-button {
-  background-color: #f0f0f0;
-  border: 1px solid #cccccc;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
+/* Specific styles for toggle button if .button-sm is not enough */
+.toggle-button-custom.button-sm {
+  background-color: var(--light-color);
+  border-color: var(--border-color);
+  color: var(--text-muted-color);
+  font-weight: 600; /* Make it slightly bolder than normal text */
+}
+.toggle-button-custom.button-sm:hover {
+  background-color: #e2e6ea; /* Slightly darker light color */
+  border-color: #dae0e5;
+  color: var(--text-color);
+}
+.toggle-button-custom .switch-icon {
+  margin-left: var(--spacing-unit) * 0.5; /* 4px */
+  font-weight: normal; /* Icon might not need to be bold */
 }
 
-.header-left .toggle-button:hover {
-  background-color: #e0e0e0;
+
+/* Specific styles for right-side header buttons if needed */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-unit); /* 8px gap between buttons */
+}
+.header-button-custom {
+  /* Any specific overrides for "Try for Free" */
+}
+.login-button-custom {
+  /* Any specific overrides for "Log In" */
 }
 
-.header-right .header-button {
-  background-color: transparent;
-  border: 1px solid #007bff;
-  color: #007bff;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 1rem;
-  font-weight: bold;
-}
-
-.header-right .header-button:hover {
-  background-color: #007bff;
-  color: white;
-}
-
-.header-right .login-button {
-  background-color: #007bff;
-  color: white;
-}
-
-.header-right .login-button:hover {
-  background-color: #0056b3;
-}
 
 /* Styles for logged-in user menu */
 .user-menu-container {
   position: relative;
+  display: inline-block; /* Or flex item if header-right is flex */
+}
+
+.user-menu-button .dropdown-icon {
+  margin-left: var(--spacing-unit) * 0.5; /* 4px */
+  font-size: 0.7em; /* Make icon smaller */
   display: inline-block;
+  transition: transform 0.2s ease-in-out;
+}
+.user-menu-container[data-dropdown-open="true"] .user-menu-button .dropdown-icon { /* Example if we add data-attribute */
+  transform: rotate(180deg);
 }
 
-.user-menu-button {
-  background-color: #007bff;
-  color: white;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.user-menu-button:hover {
-  background-color: #0056b3;
-}
 
 .dropdown-menu {
   position: absolute;
-  top: 100%; /* Position below the button */
+  top: calc(100% + var(--spacing-unit) * 0.5); /* Position below button with small gap */
   right: 0;
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  background-color: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
   list-style: none;
-  padding: 0.5rem 0;
-  margin: 0.25rem 0 0;
-  min-width: 160px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000; /* Ensure it's above other content */
+  padding: var(--spacing-unit) * 0.5 0; /* 4px 0 */
+  margin: 0;
+  min-width: 200px; /* Wider dropdown */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Softer shadow */
+  z-index: 1000; 
+  opacity: 0; /* Start hidden for animation */
+  transform: translateY(-10px); /* Start slightly above for animation */
+  animation: fadeInDown 0.2s ease-out forwards;
 }
 
-.dropdown-menu li button,
-.dropdown-menu li a { /* Apply to both buttons and links */
-  display: block; /* Make links behave like buttons for width/padding */
+@keyframes fadeInDown {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-menu li .button { /* Target .button class on Link/button */
+  display: block; 
   background: none;
   border: none;
-  color: #333;
-  padding: 0.5rem 1rem;
+  color: var(--text-color);
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
   text-align: left;
   width: 100%;
-  cursor: pointer;
-  font-size: 0.95rem;
-  text-decoration: none; /* Remove underline from links */
+  font-weight: normal; /* Override .button bold */
+  border-radius: 0; /* Remove individual button radius if items are full width */
+  /* transition is already on .button */
 }
 
-.dropdown-menu li button:hover,
-.dropdown-menu li a:hover { /* Apply hover to both */
-  background-color: #f0f0f0;
+.dropdown-menu li .button:hover { 
+  background-color: var(--light-color);
+  color: var(--primary-color);
+}
+/* Remove bottom border from last item if needed */
+.dropdown-menu li:last-child .button {
+    /* border-bottom: none; */
+}
+
+.dropdown-divider {
+  height: 1px;
+  margin: var(--spacing-unit) * 0.5 0; /* 4px 0 */
+  overflow: hidden;
+  background-color: var(--border-color);
+  border: none; /* Ensure no default hr border */
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
+  }
+  .header-left .toggle-button-custom.button-sm,
+  .header-right .button { /* Includes Try for Free, Log In, Menu */
+    font-size: 0.85rem; /* Slightly smaller text on buttons */
+    padding: calc(var(--spacing-unit) * 0.6) var(--spacing-unit); /* Smaller padding */
+  }
+  .user-menu-button .dropdown-icon {
+    font-size: 0.6em;
+  }
+  .dropdown-menu {
+    min-width: 180px; /* Adjust if needed */
+  }
+  .dropdown-menu li .button {
+    font-size: 0.9rem; /* Adjust dropdown item font size */
+    padding: calc(var(--spacing-unit) * 0.75) var(--spacing-unit); /* Adjust padding */
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: var(--spacing-unit) var(--spacing-unit); /* 8px 8px */
+    min-height: 50px;
+  }
+   .header-left .toggle-button-custom.button-sm .switch-icon,
+   .user-menu-button .dropdown-icon {
+    display: none; /* Hide icons on very small screens to save space */
+  }
 }

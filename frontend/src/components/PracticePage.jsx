@@ -21,7 +21,10 @@ const PracticePage = () => {
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showResults, setShowResults] = useState(false);
-  // questionAttempted is implicitly handled by checking if userAnswers[currentQuestionIndex] exists
+  
+  // New state for Review Mode
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewQuestionIndex, setReviewQuestionIndex] = useState(0);
 
   const navigate = useNavigate();
   const timerIntervalRef = useRef(null);
@@ -87,22 +90,38 @@ const PracticePage = () => {
           topic: selectedTopic, subTopic: selectedSubtopic, numQuestions: numQuestions,
         }),
       });
-      if (!response.ok) { /* ... (error handling as before) */
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      
+      const data = await response.json(); // Attempt to parse JSON first
+
+      if (!response.ok) {
+        // If response is not OK, data should contain the error object from backend
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      if (data && data.length > 0) {
-        setQuestions(data);
-        setCurrentQuestionIndex(0);
-        setShowSelections(false);
-        setSessionStartTime(Date.now()); // Start timer
-        setTimeElapsed(0);
-      } else { /* ... (error handling as before) */
-         setError('No questions received or empty array returned.');
+
+      // Handle cases where response is OK, but data might indicate an issue (e.g. AI returned empty array)
+      // or if backend error structure was missed by !response.ok (less likely with current backend)
+      if (!data || (Array.isArray(data) && data.length === 0) || data.error) {
+        if (data && data.message) {
+             setError(data.message);
+        } else if (Array.isArray(data) && data.length === 0) {
+            setError('The AI generated no questions for this selection.');
+        } else {
+            setError('Received unexpected data structure from server.');
+        }
+        return; // Stop further processing
       }
-    } catch (err) { /* ... (error handling as before) */
-      setError(err.message || 'Failed to fetch questions.');
+      
+      // Success case: response is OK and data is a non-empty array of questions
+      setQuestions(data);
+      setCurrentQuestionIndex(0);
+      setShowSelections(false);
+      setSessionStartTime(Date.now()); // Start timer
+      setTimeElapsed(0);
+      // setError(null); // Ensure error is cleared on success
+    } catch (err) { 
+      // This catch block will now handle network errors, JSON parsing errors if response wasn't JSON,
+      // or the error thrown from (!response.ok) block.
+      setError(err.message || 'An unknown error occurred while fetching questions.');
       console.error("Fetch error:", err);
     } finally {
       setIsLoading(false);
@@ -171,14 +190,14 @@ const PracticePage = () => {
 
 
   // --- Render Logic ---
-  if (isLoading) { /* ... (as before) */ 
-    return <div className="practice-page-container"><p className="loading-message">Loading questions...</p></div>;
+  if (isLoading) { 
+    return <div className="page-container practice-page-container"><p className="loading-message">Loading questions...</p></div>;
   }
-  if (error) { /* ... (as before, but use handleStopPractice for the button) */
+  if (error) { 
     return (
-      <div className="practice-page-container error-container">
-        <p className="error-message">Error: {error}</p>
-        <button onClick={handleStopPractice} className="return-button">Try Again</button>
+      <div className="page-container practice-page-container error-container">
+        <p className="error-message">Error: {error}</p> {/* error-message will compose alert-danger */}
+        <button onClick={handleStopPractice} className="button button-primary">Try Again</button>
       </div>
     );
   }
@@ -186,146 +205,213 @@ const PracticePage = () => {
   if (showResults) {
     const percentage = questions.length > 0 ? Math.round((currentScore / questions.length) * 100) : 0;
     return (
-      <div className="practice-page-container results-screen">
-        <Confetti recycle={false} numberOfPieces={300} />
+      <div className="page-container practice-page-container results-screen">
+        <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />
         <h1 className="page-title">Practice Complete!</h1>
         <p className="results-score">You got {currentScore} out of {questions.length} correct ({percentage}%)</p>
         <p className="results-time">Total time: {formatTime(timeElapsed)}</p>
         <div className="results-actions">
-          <button onClick={handlePracticeAgain} className="action-button">Practice Again</button>
-          <button onClick={handleBackToDashboard} className="action-button secondary">Back to Dashboard</button>
+          <button onClick={() => { setIsReviewMode(true); setReviewQuestionIndex(0); }} className="button button-info">Review Answers</button>
+          <button onClick={handlePracticeAgain} className="button button-primary">Practice Again</button>
+          <button onClick={handleBackToDashboard} className="button button-secondary">Back to Dashboard</button>
         </div>
       </div>
     );
   }
 
+  if (isReviewMode && questions.length > 0) {
+    const reviewQ = questions[reviewQuestionIndex];
+    const userAnswerForReview = userAnswers[reviewQuestionIndex];
+
+    return (
+      <div className="page-container practice-page-container review-mode-area card">
+        <h2 className="card-title">Reviewing Question {reviewQuestionIndex + 1} of {questions.length}</h2>
+        <div className="question-text">
+          <p>{reviewQ.question_text}</p>
+          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'latex' && (
+            <div className="visual-asset latex-asset"><BlockMath math={reviewQ.visual_assets.data} /></div>
+          )}
+          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'svg' && (
+            <div className="visual-asset svg-asset" dangerouslySetInnerHTML={{ __html: reviewQ.visual_assets.data }} />
+          )}
+        </div>
+        <div className="options-list review-options">
+          {reviewQ.options.map((option, index) => {
+            let buttonClass = 'button option-button disabled-option'; // Base for review
+            const isCorrectAnswer = option === reviewQ.correct_answer;
+            const isUserSelectedAnswer = userAnswerForReview && option === userAnswerForReview.selected;
+
+            if (isCorrectAnswer) buttonClass += ' review-correct-answer';
+            if (isUserSelectedAnswer) {
+              buttonClass += userAnswerForReview.correct ? ' review-user-correct' : ' review-user-incorrect';
+            }
+            return (
+              <button key={index} className={buttonClass} disabled>
+                {option}
+                {isCorrectAnswer && <span className="feedback-icon"> ✔ Correct</span>}
+                {isUserSelectedAnswer && !userAnswerForReview.correct && isCorrectAnswer && <span className="feedback-icon"> (Your pick was different)</span>}
+                {isUserSelectedAnswer && !userAnswerForReview.correct && !isCorrectAnswer && <span className="feedback-icon"> ✗ Your pick</span>}
+                {isUserSelectedAnswer && userAnswerForReview.correct && <span className="feedback-icon"> ✓ Your pick</span>}
+
+              </button>
+            );
+          })}
+        </div>
+        <div className="explanation-area review-explanation">
+          <h4>Explanation:</h4>
+          <p>{reviewQ.explanation}</p>
+        </div>
+        <div className="navigation-buttons">
+          <button 
+            onClick={() => setReviewQuestionIndex(i => i - 1)} 
+            disabled={reviewQuestionIndex === 0}
+            className="button button-secondary"
+          >
+            Previous
+          </button>
+          <button 
+            onClick={() => setReviewQuestionIndex(i => i + 1)} 
+            disabled={reviewQuestionIndex === questions.length - 1}
+            className="button button-primary"
+          >
+            Next
+          </button>
+        </div>
+        <button onClick={() => setIsReviewMode(false)} className="button button-info button-block">Exit Review</button>
+      </div>
+    );
+  }
+  
   if (!showSelections && questions.length > 0) {
     const currentQuestion = questions[currentQuestionIndex];
     const attemptedAnswer = userAnswers[currentQuestionIndex];
 
     return (
-      <div className="practice-page-container question-display-area">
-        <div className="session-info">
+      <div className="page-container practice-page-container question-display-area">
+        <div className="session-info card"> 
             <p className="question-counter">Question {currentQuestionIndex + 1} of {questions.length}</p>
             <p className="timer">Time: {formatTime(timeElapsed)}</p>
         </div>
         <p className="target-time-info">Target time per question: 1 min 30 secs (Static)</p>
         
-        <div className="question-text">
-          <p>{currentQuestion.question_text}</p>
-          {/* ... (visual asset rendering as before) ... */}
-           {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'latex' && (
-            <div className="visual-asset latex-asset">
-              <BlockMath math={currentQuestion.visual_assets.data} />
+        <div className="question-content card"> {/* Added card for question content */}
+          <div className="question-text">
+            <p>{currentQuestion.question_text}</p>
+            {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'latex' && (
+              <div className="visual-asset latex-asset">
+                <BlockMath math={currentQuestion.visual_assets.data} />
+              </div>
+            )}
+            {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'svg' && (
+              <div 
+                className="visual-asset svg-asset" 
+                dangerouslySetInnerHTML={{ __html: currentQuestion.visual_assets.data }} 
+              />
+            )}
+          </div>
+
+          <div className="options-list">
+            {currentQuestion.options.map((option, index) => {
+              let buttonClass = 'button option-button'; {/* Base classes */}
+              if (attemptedAnswer) {
+                if (option === attemptedAnswer.selected) {
+                  buttonClass += attemptedAnswer.correct ? ' selected correct' : ' selected incorrect';
+                } else if (option === currentQuestion.correct_answer) {
+                  buttonClass += ' correct-unselected'; // Show correct if user picked wrong
+                }
+              }
+              return (
+                <button 
+                  key={index} 
+                  className={buttonClass}
+                  onClick={() => handleOptionSelect(option)}
+                  disabled={!!attemptedAnswer}
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+
+          {attemptedAnswer && (
+            <div className="explanation-area">
+              <h4>Explanation:</h4>
+              <p>{currentQuestion.explanation}</p>
             </div>
           )}
-          {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'svg' && (
-            <div 
-              className="visual-asset svg-asset" 
-              dangerouslySetInnerHTML={{ __html: currentQuestion.visual_assets.data }} 
-            />
-          )}
-        </div>
+        </div> {/* End of question-content card */}
 
-        <div className="options-list">
-          {currentQuestion.options.map((option, index) => {
-            let buttonClass = 'option-button';
-            if (attemptedAnswer) {
-              if (option === attemptedAnswer.selected) {
-                buttonClass += attemptedAnswer.correct ? ' selected correct' : ' selected incorrect';
-              } else if (option === currentQuestion.correct_answer) {
-                buttonClass += ' correct-unselected'; // Show correct if user picked wrong
-              }
-            }
-            return (
-              <button 
-                key={index} 
-                className={buttonClass}
-                onClick={() => handleOptionSelect(option)}
-                disabled={!!attemptedAnswer}
-              >
-                {option}
-              </button>
-            );
-          })}
-        </div>
-
-        {attemptedAnswer && (
-          <div className="explanation-area">
-            <h4>Explanation:</h4>
-            <p>{currentQuestion.explanation}</p>
-          </div>
-        )}
 
         <div className="navigation-buttons">
-          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0}>
+          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="button button-secondary">
             Previous
           </button>
           {currentQuestionIndex === questions.length - 1 ? (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer}>Finish</button>
+            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-success">Finish</button>
           ) : (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer}>Next</button>
+            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-primary">Next</button>
           )}
         </div>
-        <button onClick={handleStopPractice} className="return-button full-width-button stop-practice-button">
+        <button onClick={handleStopPractice} className="button button-danger button-block stop-practice-button">
           Stop Practice
         </button>
       </div>
     );
   }
 
-  // Initial selection view (mostly as before, but ensure `handleStartPractice` is called)
+  // Initial selection view
   return (
-    <div className="practice-page-container">
+    <div className="page-container practice-page-container">
       <h1 className="page-title">Practice Zone</h1>
-      {/* ... (Topic, Subtopic, NumQuestions selections as before, ensure they call handleStartPractice) ... */}
-       <div className="selection-group">
-        <label htmlFor="topic-select">Choose a Topic:</label>
-        <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} disabled={!showSelections}>
-          <option value="">-- Select Topic --</option>
-          {Object.keys(topics).map(topic => (
-            <option key={topic} value={topic}>{topic}</option>
-          ))}
-        </select>
-      </div>
-
-      {selectedTopic && (
-        <div className="selection-group">
-          <label htmlFor="subtopic-select">Choose a Subtopic:</label>
-          <select id="subtopic-select" value={selectedSubtopic} onChange={handleSubtopicChange} disabled={!selectedTopic || !showSelections}>
-            <option value="">-- Select Subtopic --</option>
-            {topics[selectedTopic]?.map(subtopic => (
-              <option key={subtopic} value={subtopic}>{subtopic}</option>
+      <div className="card"> {/* Wrap selection area in a card */}
+        <div className="form-group">
+          <label htmlFor="topic-select">Choose a Topic:</label>
+          <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} disabled={!showSelections} className="form-control">
+            <option value="">-- Select Topic --</option>
+            {Object.keys(topics).map(topic => (
+              <option key={topic} value={topic}>{topic}</option>
             ))}
           </select>
         </div>
-      )}
 
-      {selectedSubtopic && (
-         <div className="selection-group">
-            <label>Number of Questions:</label>
-            <div className="question-buttons">
-                {[5, 10, 15].map(num => ( // Assuming backend can handle these counts
-                    <button 
-                        key={num}
-                        onClick={() => handleNumQuestionsClick(num)}
-                        className={numQuestions === num ? 'active' : ''}
-                        disabled={!showSelections}
-                    >
-                        {num} Questions
-                    </button>
-                ))}
-            </div>
-        </div>
-      )}
-      
-      <button 
-        className="start-practice-button" 
-        onClick={handleStartPractice} // This is the key part
-        disabled={!selectedTopic || !selectedSubtopic || numQuestions === 0 || !showSelections}
-      >
-        Start Practice
-      </button>
+        {selectedTopic && (
+          <div className="form-group">
+            <label htmlFor="subtopic-select">Choose a Subtopic:</label>
+            <select id="subtopic-select" value={selectedSubtopic} onChange={handleSubtopicChange} disabled={!selectedTopic || !showSelections} className="form-control">
+              <option value="">-- Select Subtopic --</option>
+              {topics[selectedTopic]?.map(subtopic => (
+                <option key={subtopic} value={subtopic}>{subtopic}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {selectedSubtopic && (
+          <div className="form-group">
+              <label>Number of Questions:</label>
+              <div className="question-buttons">
+                  {[5, 10, 15].map(num => (
+                      <button 
+                          key={num}
+                          onClick={() => handleNumQuestionsClick(num)}
+                          className={`button button-outline-primary ${numQuestions === num ? 'active' : ''}`}
+                          disabled={!showSelections}
+                      >
+                          {num} Questions
+                      </button>
+                  ))}
+              </div>
+          </div>
+        )}
+        
+        <button 
+          className="button button-success button-block" 
+          onClick={handleStartPractice}
+          disabled={!selectedTopic || !selectedSubtopic || numQuestions === 0 || !showSelections}
+        >
+          Start Practice
+        </button>
+      </div> {/* End of card for selection */}
     </div>
   );
 };
