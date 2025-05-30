@@ -1,0 +1,72 @@
+.test-page-container {
+  padding: 2rem;
+  max-width: 700px; /* Slightly narrower than practice page for simplicity */
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.page-title {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.selection-group {
+  margin-bottom: 1.5rem;
+}
+
+.selection-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.selection-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f9f9f9;
+}
+
+.start-test-button {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background-color: #007bff; /* Blue for starting tests */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: background-color 0.3s ease;
+}
+
+.start-test-button:hover {
+  background-color: #0056b3; /* Darker blue */
+}
+
+.start-test-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .test-page-container {
+    padding: 1rem;
+  }
+  .page-title {
+    font-size: 1.5rem;
+  }
+  .start-test-button {
+    font-size: 1rem;
+  }
+}

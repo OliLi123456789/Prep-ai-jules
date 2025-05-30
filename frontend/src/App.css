@@ -1,0 +1,95 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex-grow: 1;
+  /* Ensures the main content takes up available space, pushing footer down */
+}
+
+.main-content-area {
+  /* Styles for the container of testimonials or other primary content */
+  padding: 0; /* Testimonials section has its own padding */
+  /* background-color: #f4f6f8; */ /* Example background */
+}
+
+.hero-section {
+  background-color: #007bff; /* Primary blue, adjust as needed */
+  color: white;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.hero-section h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero-section p {
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.cta-button {
+  background-color: #ffffff;
+  color: #007bff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.cta-button:hover {
+  background-color: #f0f0f0; /* Lighter shade on hover */
+  color: #0056b3;
+}
+
+.dashboard-placeholder {
+  padding: 2rem;
+  text-align: center;
+  background-color: #e9ecef; /* Light grey background */
+  border-radius: 8px;
+  margin: 2rem;
+}
+
+.dashboard-placeholder h2 {
+  color: #343a40; /* Dark grey for title */
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-placeholder p {
+  color: #495057; /* Medium grey for text */
+  font-size: 1.1rem;
+}
+
+.app-footer {
+  background-color: #343a40; /* Dark background for footer */
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: auto; /* Pushes footer to the bottom if content is short */
+}
+
+.app-footer p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Responsive adjustments if necessary */
+@media (max-width: 768px) {
+  .hero-section h2 {
+    font-size: 2rem;
+  }
+  .hero-section p {
+    font-size: 1rem;
+  }
+  .cta-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+  }
+}

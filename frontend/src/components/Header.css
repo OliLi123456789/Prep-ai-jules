@@ -1,0 +1,100 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-left .toggle-button {
+  background-color: #f0f0f0;
+  border: 1px solid #cccccc;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.header-left .toggle-button:hover {
+  background-color: #e0e0e0;
+}
+
+.header-right .header-button {
+  background-color: transparent;
+  border: 1px solid #007bff;
+  color: #007bff;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 1rem;
+  font-weight: bold;
+}
+
+.header-right .header-button:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.header-right .login-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.header-right .login-button:hover {
+  background-color: #0056b3;
+}
+
+/* Styles for logged-in user menu */
+.user-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.user-menu-button {
+  background-color: #007bff;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.user-menu-button:hover {
+  background-color: #0056b3;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%; /* Position below the button */
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  list-style: none;
+  padding: 0.5rem 0;
+  margin: 0.25rem 0 0;
+  min-width: 160px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000; /* Ensure it's above other content */
+}
+
+.dropdown-menu li button,
+.dropdown-menu li a { /* Apply to both buttons and links */
+  display: block; /* Make links behave like buttons for width/padding */
+  background: none;
+  border: none;
+  color: #333;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: none; /* Remove underline from links */
+}
+
+.dropdown-menu li button:hover,
+.dropdown-menu li a:hover { /* Apply hover to both */
+  background-color: #f0f0f0;
+}
