@@ -80,6 +80,24 @@
   white-space: nowrap; /* Prevent "Send" from wrapping */
 }
 
+.tutor-capabilities-info {
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 2); /* 8px 16px */
+  background-color: var(--light-color);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem; /* 14px */
+  color: var(--text-muted-color);
+  text-align: center;
+}
+.tutor-capabilities-info p {
+  margin: 0;
+  line-height: 1.4;
+}
+.tutor-capabilities-info strong {
+  color: var(--info-color); /* Or var(--primary-color) */
+}
+
+
 /* Responsive adjustments for chat */
 @media (max-width: 768px) {
   .chat-card {

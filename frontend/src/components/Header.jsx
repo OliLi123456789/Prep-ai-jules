@@ -65,7 +65,7 @@ const Header = ({ onLogin, onLogout, isLoggedIn }) => {
                 <li><Link to="/ai-learn" className="button" onClick={() => setDropdownOpen(false)}>AI Learn</Link></li>
                 <li><Link to="/ai-tutor" className="button" onClick={() => setDropdownOpen(false)}>AI Tutor</Link></li>
                 <li><hr className="dropdown-divider" /></li> {/* Optional divider */}
-                <li><Link to="/settings" className="button" onClick={() => setDropdownOpen(false)}>Settings</Link></li>
+                <li><Link to="/settings" className="button" onClick={() => setDropdownOpen(false)}>Profile</Link></li> {/* Changed text to Profile */}
                 <li><button className="button" onClick={handleLogoutClick}>Logout</button></li>
               </ul>
             )}

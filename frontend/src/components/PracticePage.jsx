@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InlineMath, BlockMath } from 'react-katex';
-import { useNavigate } from 'react-router-dom'; // For "Back to Dashboard"
+import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
 import Confetti from 'react-confetti';
 import './PracticePage.css';
 
 const PracticePage = () => {
+  const navigate = useNavigate(); // Already here
+  const location = useLocation(); // Get location object
+
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedSubtopic, setSelectedSubtopic] = useState('');
   const [numQuestions, setNumQuestions] = useState(0);
@@ -26,7 +29,9 @@ const PracticePage = () => {
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [reviewQuestionIndex, setReviewQuestionIndex] = useState(0);
 
-  const navigate = useNavigate();
+  // For displaying a title if navigated with state
+  const [pageTitleOverride, setPageTitleOverride] = useState(null); 
+
   const timerIntervalRef = useRef(null);
 
   // Placeholder data
@@ -59,8 +64,64 @@ const PracticePage = () => {
     } else {
       clearInterval(timerIntervalRef.current);
     }
-    return () => clearInterval(timerIntervalRef.current); // Cleanup on unmount or when conditions change
+    return () => clearInterval(timerIntervalRef.current);
   }, [sessionStartTime, showResults]);
+
+  // Effect to handle auto-start from navigation state
+  useEffect(() => {
+    if (location.state && location.state.topic && location.state.subTopic && location.state.numQuestions) {
+      const { topic, subTopic, numQuestions: numQsFromState, description } = location.state;
+      
+      // Check if this specific auto-start has already been processed
+      // This simple check might not be robust enough if user navigates back then forward again with same state
+      if (sessionStorage.getItem('practicePageAutoStarted') === JSON.stringify(location.state)) {
+          return;
+      }
+
+      console.log("PracticePage: Received state for auto-start:", location.state);
+      setSelectedTopic(topic);
+      setSelectedSubtopic(subTopic);
+      setNumQuestions(numQsFromState);
+      if (description) {
+        setPageTitleOverride(`Starting: ${description}`);
+      }
+      
+      // Call handleStartPractice, but it needs to be stable or wrapped if used in useEffect deps
+      // Or, ensure handleStartPractice uses up-to-date state values from its closure or via refs/callback
+      // For simplicity here, assuming handleStartPractice will pick up these new states.
+      // A more robust way is to pass them directly or trigger via a separate effect.
+      // To ensure it runs with the new state, let's use a short timeout or another effect.
+      
+      // Mark as processed and clear state
+      sessionStorage.setItem('practicePageAutoStarted', JSON.stringify(location.state));
+      navigate(location.pathname, { replace: true, state: {} }); // Clear state
+
+      // Trigger practice start after state updates have likely propagated
+      // This is a common pattern: set states, then trigger action that uses them
+      // Need to ensure handleStartPractice is called *after* these states are truly set.
+      // A dedicated effect listening to these specific states might be more robust.
+      // For now, let's directly call it. If it doesn't work, we'll need that effect.
+      // handleStartPractice(); // This might use stale state if called immediately.
+      
+      // Let's try to trigger it via an effect that watches these specific states
+    } else {
+        sessionStorage.removeItem('practicePageAutoStarted'); // Clear if no valid state
+    }
+  }, [location.state, navigate]);
+
+  // Effect to auto-start practice when selections are made (either manually or via navigation state)
+  // and not already in a session or showing results.
+  useEffect(() => {
+    // Only auto-start if selections are present (from nav state) AND we are in the selection view.
+    if (selectedTopic && selectedSubtopic && numQuestions > 0 && showSelections && location.state && location.state.topic) {
+        // The check 'location.state.topic' ensures this effect primarily runs for navigation-triggered auto-starts
+        // and not just any manual selection change *unless* it was the one that completed the form.
+        console.log("PracticePage: Auto-starting practice due to state change from navigation.");
+        handleStartPractice();
+        setPageTitleOverride(null); // Clear override after starting
+    }
+  }, [selectedTopic, selectedSubtopic, numQuestions, showSelections, location.state]);
+
 
   const formatTime = (totalSeconds) => {
     const minutes = Math.floor(totalSeconds / 60);
@@ -190,13 +251,18 @@ const PracticePage = () => {
 
 
   // --- Render Logic ---
-  if (isLoading) { 
+  if (isLoading && showSelections) { // Show loading only if it's for initial module load from selections
+    return <div className="page-container practice-page-container"><p className="loading-message">{pageTitleOverride || "Loading setup..."}</p></div>;
+  }
+  // If loading questions *after* selections are hidden (i.e., practice started)
+  if (isLoading && !showSelections) {
     return <div className="page-container practice-page-container"><p className="loading-message">Loading questions...</p></div>;
   }
+
   if (error) { 
     return (
       <div className="page-container practice-page-container error-container">
-        <p className="error-message">Error: {error}</p> {/* error-message will compose alert-danger */}
+        <p className="error-message">Error: {error}</p>
         <button onClick={handleStopPractice} className="button button-primary">Try Again</button>
       </div>
     );
@@ -207,7 +273,7 @@ const PracticePage = () => {
     return (
       <div className="page-container practice-page-container results-screen">
         <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />
-        <h1 className="page-title">Practice Complete!</h1>
+        <h1 className="page-title">Practice Complete!</h1> {/* pageTitleOverride not used here */}
         <p className="results-score">You got {currentScore} out of {questions.length} correct ({percentage}%)</p>
         <p className="results-time">Total time: {formatTime(timeElapsed)}</p>
         <div className="results-actions">
@@ -362,10 +428,11 @@ const PracticePage = () => {
   // Initial selection view
   return (
     <div className="page-container practice-page-container">
-      <h1 className="page-title">Practice Zone</h1>
+      <h1 className="page-title">{pageTitleOverride || "Practice Zone"}</h1>
+      {showSelections && (
       <div className="card"> {/* Wrap selection area in a card */}
         <div className="form-group">
-          <label htmlFor="topic-select">Choose a Topic:</label>
+          <label htmlFor="topic-select">Choose a Topic:</label> {/* This label might need specific styling if it's part of a complex layout */}
           <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} disabled={!showSelections} className="form-control">
             <option value="">-- Select Topic --</option>
             {Object.keys(topics).map(topic => (

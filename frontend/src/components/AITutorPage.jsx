@@ -90,8 +90,15 @@ const AITutorPage = () => {
           ))}
           <div ref={messagesEndRef} /> {/* Anchor for scrolling */}
         </div>
+        
+        <div className="tutor-capabilities-info">
+          <p>
+            <strong>Hint:</strong> I can help with specific questions, explain SAT/ACT concepts, and discuss test-taking strategies, time management, or even calculator tips!
+          </p>
+        </div>
+
         {isLoadingResponse && <p className="typing-indicator">AI Tutor is typing...</p>}
-        {error && <p className="error-message chat-error">{error}</p>} {/* chat-error for specific styling */}
+        {error && <p className="error-message chat-error">{error}</p>}
         
         <form onSubmit={handleSubmit} className="chat-input-form">
           <input

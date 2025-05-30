@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import './AILearnPage.css'; // To be created
+import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
+import './AILearnPage.css'; 
 
 const AILearnPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [selectedTestType, setSelectedTestType] = useState('');
-  const [selectedSection, setSelectedSection] = useState('');
+  const [selectedSection, setSelectedSection] = useState(''); // This corresponds to 'topic' from Dashboard state
   const [selectedSubTopic, setSelectedSubTopic] = useState('');
 
   const [learningModule, setLearningModule] = useState(null);
   const [isLoadingModule, setIsLoadingModule] = useState(false);
   const [error, setError] = useState(null);
-  
-  // { qIndex: { selected: 'option', revealed: false, correct: false/true } }
   const [userPracticeAnswers, setUserPracticeAnswers] = useState({});
+  const [pageTitleOverride, setPageTitleOverride] = useState(null);
+
+  // const [userPracticeAnswers, setUserPracticeAnswers] = useState({}); // Already defined above
 
   // Predefined topic structure
   const topicSelections = {
@@ -28,8 +33,126 @@ const AILearnPage = () => {
     },
   };
 
+  // Effect to handle auto-load from navigation state
+  useEffect(() => {
+    if (location.state && location.state.topic && location.state.subTopic) { // 'topic' from nav state is 'section' here
+      const { topic: sectionFromState, subTopic: subTopicFromState, description } = location.state;
+
+      // Prevent re-processing if already processed this navigation state
+      if (sessionStorage.getItem('aiLearnPageAutoStarted') === JSON.stringify(location.state)) {
+        return;
+      }
+      
+      console.log("AILearnPage: Received state for auto-load:", location.state);
+
+      let inferredTestType = '';
+      for (const testType in topicSelections) {
+        if (topicSelections[testType][sectionFromState]) {
+          inferredTestType = testType;
+          break;
+        }
+      }
+
+      if (inferredTestType) {
+        setSelectedTestType(inferredTestType);
+        setSelectedSection(sectionFromState);
+        setSelectedSubTopic(subTopicFromState);
+        if (description) {
+          setPageTitleOverride(`Loading Module: ${description}`);
+        }
+        
+        sessionStorage.setItem('aiLearnPageAutoStarted', JSON.stringify(location.state));
+        navigate(location.pathname, { replace: true, state: {} }); // Clear state
+      } else {
+        console.warn("AILearnPage: Could not infer testType for auto-load with section:", sectionFromState);
+        sessionStorage.removeItem('aiLearnPageAutoStarted');
+      }
+    } else {
+        sessionStorage.removeItem('aiLearnPageAutoStarted');
+    }
+  }, [location.state, navigate]);
+
+
+  // Effect to auto-load module when selections are valid and potentially set by navigation
+  useEffect(() => {
+    // Check if this effect should run: selections are valid, not loading, and it's an auto-start scenario
+    if (selectedTestType && selectedSection && selectedSubTopic && 
+        !isLoadingModule && !learningModule && // Only if not already loaded/loading
+        location.state && location.state.topic // And if location.state *was* just processed (now cleared)
+                                               // This condition is tricky. The original sessionStorage flag is better.
+                                               // Let's re-evaluate: this effect should run if selections are complete,
+                                               // and the trigger was the completion of those selections (potentially by previous effect)
+       ) {
+        // A better way to check if it was an auto-start is if the sessionStorage flag was just set.
+        // However, since sessionStorage is set *before* state updates are guaranteed,
+        // we rely on these states being set, then call handleLoadModule.
+        // The previous effect already cleared location.state.
+        // We only want to auto-load if these states were set by the *navigation event*.
+        // The `sessionStorage.getItem('aiLearnPageAutoStarted')` check in the *first* effect tries to prevent reruns.
+        // This second effect needs to reliably know it's an auto-start.
+        // The simplest is to check if the component just mounted AND has these states.
+        // For this specific flow, we assume if these are set and no module yet, it's due to nav.
+        
+        // Check if the *reason* these are set is because sessionStorage was just populated.
+        // This is a bit indirect. A direct flag passed between effects is not standard.
+        // The key is the first effect sets the states and clears location.state.
+        // This effect will then pick up the changed states.
+        // We need to ensure it only automatically calls handleLoadModule for the navigation case.
+        
+        // If the selections are complete AND we are in the initial state of this page load (no module yet, not loading)
+        // AND the sessionStorage flag indicates we *just* processed a navigation state:
+        if (sessionStorage.getItem('aiLearnPageProcessedNav') === "true") {
+            console.log("AILearnPage: Auto-loading module due to state change from navigation.");
+            handleLoadModule();
+            setPageTitleOverride(null); // Clear override after attempting to load
+            sessionStorage.removeItem('aiLearnPageProcessedNav'); // Consume the flag
+        }
+    }
+  }, [selectedTestType, selectedSection, selectedSubTopic, isLoadingModule, learningModule]);
+  
+  // Update the first useEffect to set a flag that this second useEffect can consume
+  // This is better than relying on timing or indirect checks.
+  useEffect(() => {
+    if (location.state && location.state.topic && location.state.subTopic) {
+      const { topic: sectionFromState, subTopic: subTopicFromState, description } = location.state;
+      if (JSON.stringify(location.state) === sessionStorage.getItem('aiLearnPageAutoStarted')) return;
+
+      console.log("AILearnPage: Processing navigation state:", location.state);
+      let inferredTestType = '';
+      for (const testType in topicSelections) {
+        if (topicSelections[testType][sectionFromState]) {
+          inferredTestType = testType;
+          break;
+        }
+      }
+      if (inferredTestType) {
+        setSelectedTestType(inferredTestType);
+        setSelectedSection(sectionFromState);
+        setSelectedSubTopic(subTopicFromState);
+        if (description) setPageTitleOverride(`Loading Module: ${description}`);
+        
+        sessionStorage.setItem('aiLearnPageAutoStarted', JSON.stringify(location.state));
+        sessionStorage.setItem('aiLearnPageProcessedNav', "true"); // Flag for the next effect
+        navigate(location.pathname, { replace: true, state: {} });
+      } else {
+        console.warn("AILearnPage: Could not infer testType for auto-load with section:", sectionFromState);
+        sessionStorage.removeItem('aiLearnPageAutoStarted');
+        sessionStorage.removeItem('aiLearnPageProcessedNav');
+      }
+    } else {
+      sessionStorage.removeItem('aiLearnPageAutoStarted');
+      // Do not remove aiLearnPageProcessedNav here, it should be consumed by the other effect.
+      // Or remove it if we are sure there's no pending auto-load.
+      if (sessionStorage.getItem('aiLearnPageProcessedNav') !== "true") { // Only remove if not about to be used
+          sessionStorage.removeItem('aiLearnPageProcessedNav');
+      }
+    }
+  }, [location.state, navigate]);
+
+
   const handleLoadModule = async () => {
     if (!selectedTestType || !selectedSection || !selectedSubTopic) {
+      // This alert might be redundant if button is disabled, but good for programmatic calls
       alert("Please make all selections (Test Type, Section, and Sub-Topic).");
       return;
     }

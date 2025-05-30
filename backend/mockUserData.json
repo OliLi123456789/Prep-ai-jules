@@ -1,0 +1,84 @@
+{
+  "name": "Alex Lee",
+  "testDetails": {
+    "testType": "SAT",
+    "testDate": "2024-08-17",
+    "goalScore": {
+      "overall": 1520,
+      "math": 770,
+      "reading": 370,
+      "writing": 380
+    }
+  },
+  "pastScores": [
+    {
+      "scoreId": "sat_official_1",
+      "type": "SAT Full Official",
+      "date": "2023-12-02",
+      "overall": 1350,
+      "math": 650,
+      "reading": 340,
+      "writing": 360,
+      "isOfficial": true
+    },
+    {
+      "scoreId": "act_practice_1",
+      "type": "ACT Full Practice",
+      "date": "2024-01-15",
+      "overall": 28,
+      "math": 27,
+      "english": 29,
+      "reading": 28,
+      "science": 28,
+      "isOfficial": false
+    },
+    {
+      "scoreId": "sat_math_practice_section_1",
+      "type": "SAT Math Section Practice",
+      "date": "2024-02-10",
+      "math": 700,
+      "isOfficial": false
+    }
+  ],
+  "practiceHistory": [
+    {
+      "historyId": "ph_alg_1",
+      "date": "2024-02-20",
+      "type": "practice",
+      "topic": "Math",
+      "subTopic": "Algebra",
+      "length": 10,
+      "scorePercent": 0.7,
+      "timeSpentSeconds": 900
+    },
+    {
+      "historyId": "ph_read_main_1",
+      "date": "2024-02-21",
+      "type": "practice",
+      "topic": "Reading",
+      "subTopic": "Main Idea",
+      "length": 5,
+      "scorePercent": 0.8,
+      "timeSpentSeconds": 600 
+    },
+    {
+      "historyId": "atl_geom_1",
+      "date": "2024-02-22",
+      "type": "ai_tutor_learn",
+      "topic": "Math",
+      "subTopic": "Geometry",
+      "length": 3,
+      "scorePercent": 1.0,
+      "timeSpentSeconds": 1200
+    }
+  ],
+  "userPreferences": {
+    "preferredSectionLengths": [10, 15, 5],
+    "dailyStudyTimeMinutesAvg": 90
+  },
+  "generatedPlan": {
+    "startDate": null,
+    "endDate": null,
+    "dailyTasks": []
+  }
+}

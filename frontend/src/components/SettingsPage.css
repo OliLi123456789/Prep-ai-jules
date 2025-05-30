@@ -1,37 +1,94 @@
 /* SettingsPage.css */
-.settings-page-container.page-container { /* Specific max-width for settings page if different */
-  max-width: 700px; 
+.settings-page-container.page-container { 
+  max-width: 800px; /* Allow a bit more width for profile sections */
 }
 
-.settings-page-container .card {
-  /* Additional padding or specific styles for the card containing the form, if needed */
-  /* padding: var(--spacing-unit) * 3; */ /* e.g., 24px */
-}
-
+/* The main form element itself doesn't need much styling if sections are cards */
 .settings-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-unit) * 1.5; /* 12px, reduced from 1.5rem as form-group has its own margin */
+  gap: var(--spacing-unit) * 2; /* Space between cards/sections */
 }
 
-/* .form-group, .form-group label, .form-control, .form-text are global */
+/* .card, .card-title, .form-group, .form-control, .form-text, .button variants are global */
 
-/* Styles for the save button if specific alignment or margin is needed */
-.settings-form .button.button-success {
-  margin-top: var(--spacing-unit); /* 8px */
-  align-self: flex-start; 
+.sub-card-title { /* For titles within a card, like "Add New Past Score" */
+  font-size: 1.2rem;
+  color: var(--text-muted-color);
+  margin-top: var(--spacing-unit) * 2; /* Space above sub-title */
+  margin-bottom: var(--spacing-unit) * 1.5;
+  padding-bottom: var(--spacing-unit) * 0.5;
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* .save-message (now .alert .alert-success) is global */
-.save-message { /* Keep if you need to override margin or specific text properties */
-   margin-top: var(--spacing-unit) * 2; /* 16px */
+.past-scores-list {
+  margin-bottom: var(--spacing-unit) * 2;
+}
+
+.past-score-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-unit) 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.past-score-item:last-child {
+  border-bottom: none;
+}
+.past-score-item span {
+  font-size: 0.95rem;
+}
+.past-score-item .remove-score-btn.button-sm {
+  /* Global .button-sm and .button-danger should cover this */
+  /* Add margin if needed: margin-left: var(--spacing-unit); */
+}
+
+.add-past-score-form {
+  margin-top: var(--spacing-unit) * 1.5;
+  padding-top: var(--spacing-unit) * 1.5;
+  border-top: 1px dashed var(--border-color); /* Separator for add form */
+}
+.add-past-score-form .button-secondary { /* "Add Score to List" button */
+    margin-top: var(--spacing-unit);
+    align-self: flex-start;
+}
+
+/* Checkbox styling within form-group for "Official Score?" */
+.form-group input[type="checkbox"] {
+    width: auto; /* Override .form-control width */
+    margin-right: var(--spacing-unit);
+    vertical-align: middle;
+}
+.form-group label input[type="checkbox"] + span { /* If label wraps checkbox and text */
+    vertical-align: middle;
 }
 
 
-/* Responsive adjustments */
+.save-profile-button.button-lg { /* Save Profile & Settings button */
+  margin-top: var(--spacing-unit) * 1.5; /* More space above main save button */
+  align-self: center; /* Center the main save button */
+  min-width: 250px; /* Give it a decent min width */
+}
+
+/* Specific responsive adjustments for settings page */
+@media (max-width: 768px) {
+  .settings-page-container.page-container {
+    max-width: 100%; /* Allow full width on smaller mobile */
+  }
+}
+
 @media (max-width: 600px) {
-  .settings-form .button.button-success {
+  .settings-form .button.button-success.button-lg { /* Main save button */
     width: 100%; 
-    align-self: stretch; /* Ensure it stretches if it was flex-start */
+    align-self: stretch; 
+  }
+  .past-score-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-unit) * 0.5;
+  }
+  .past-score-item .remove-score-btn.button-sm {
+    margin-top: var(--spacing-unit) * 0.5;
+    align-self: flex-end;
   }
 }

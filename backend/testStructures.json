@@ -1,0 +1,61 @@
+{
+  "SAT": {
+    "Math": {
+      "sections": ["Math"],
+      "subTopics": {
+        "Algebra": { "weight": 35, "typicalQuestions": 20 },
+        "Advanced Math": { "weight": 30, "typicalQuestions": 16 },
+        "Problem Solving and Data Analysis": { "weight": 25, "typicalQuestions": 17 },
+        "Geometry and Trigonometry": { "weight": 10, "typicalQuestions": 5 }
+      }
+    },
+    "Reading": {
+      "sections": ["Reading"],
+      "subTopics": {
+        "Information and Ideas": { "weight": 33, "typicalQuestions": 17 },
+        "Craft and Structure": { "weight": 33, "typicalQuestions": 17 },
+        "Synthesis": { "weight": 34, "typicalQuestions": 18 }
+      }
+    },
+    "Writing": {
+      "sections": ["Writing and Language"],
+      "subTopics": {
+        "Standard English Conventions": { "weight": 45, "typicalQuestions": 20 },
+        "Expression of Ideas": { "weight": 55, "typicalQuestions": 24 }
+      }
+    }
+  },
+  "ACT": {
+    "English": {
+      "sections": ["English"],
+      "subTopics": {
+        "Production of Writing": { "weight": 30, "typicalQuestions": 22 },
+        "Knowledge of Language": { "weight": 17, "typicalQuestions": 13 },
+        "Conventions of Standard English": { "weight": 53, "typicalQuestions": 40 }
+      }
+    },
+    "Math": {
+      "sections": ["Math"],
+      "subTopics": {
+        "Preparing for Higher Math": { "weight": 60, "typicalQuestions": 35 },
+        "Integrating Essential Skills": { "weight": 40, "typicalQuestions": 25 }
+      }
+    },
+    "Reading": {
+      "sections": ["Reading"],
+      "subTopics": {
+        "Key Ideas and Details": { "weight": 55, "typicalQuestions": 22 },
+        "Craft and Structure": { "weight": 27, "typicalQuestions": 11 },
+        "Integration of Knowledge and Ideas": { "weight": 18, "typicalQuestions": 7 }
+      }
+    },
+    "Science": {
+      "sections": ["Science"],
+      "subTopics": {
+        "Interpretation of Data": { "weight": 40, "typicalQuestions": 18 },
+        "Scientific Investigation": { "weight": 27, "typicalQuestions": 10 },
+        "Evaluation of Models, Inferences, and Experimental Results": { "weight": 33, "typicalQuestions": 12 }
+      }
+    }
+  }
+}
