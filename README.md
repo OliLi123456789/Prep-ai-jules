@@ -79,6 +79,23 @@ The AI Tutor is a core feature designed to provide personalized assistance.
        "Thanks for clarifying affect/effect! Now, I'm stuck on an ACT math problem. It says: 'In triangle ABC, angle A is 30 degrees, side b (AC) is 10 units, and side a (BC) is 5 units. Find the measure of angle B.' I know I should use the Law of Sines, but I'm not sure how to set it up correctly for this case, or if there could be more than one possible answer for angle B. Can you walk me through it?"
        ```
 
+## Practice Question Generation (`/api/generate-questions`) Prompts
+
+The application can generate practice questions for various test sections and topics via the `/api/generate-questions` endpoint. This feature also uses the DeepSeek API with a specific set of prompts:
+
+**1. System Prompt for Question Generation:**
+   This is the general instruction given to the LLM, defined in `backend/server.js` within the `getAIQuestions` function:
+   ```
+   You are an expert test question writer. You generate questions in a precise JSON format as instructed. Do not include any markdown formatting like ```json or ``` around the JSON output.
+   ```
+
+**2. Instructional Prompt (Example for ACT Trigonometry):**
+   This part of the prompt is dynamically constructed based on user selections (e.g., test type, topic, sub-topic, number of questions). For instance, to generate 5 ACT Trigonometry questions, the instructional content sent to the LLM would be:
+   ```
+   Generate 5 questions for an ACT Math test, focusing on Trigonometry. Return the output as a VALID JSON array where each element is an object with the following keys: 'question_text' (string), 'options' (array of 4 strings), 'correct_answer' (string - one of the options), 'explanation' (string), and optionally 'visual_assets'. If 'visual_assets' is used, it must be an object with 'type' (string, either 'latex' or 'svg') and 'data' (string, the LaTeX or SVG code). Ensure no extra text or markdown formatting outside the JSON array. The entire response should be only the JSON array itself.
+   ```
+   *(Note: In this example, the request to the API endpoint would specify parameters like `testType: "ACT"`, `topic: "Math"`, `subTopic: "Trigonometry"`, and `numQuestions: 5` which are then used to build the prompt above.)*
+
 ## Application Pages Overview
 
 The application is organized into the following main pages (components found in `frontend/src/components/`):
