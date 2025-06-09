@@ -13,12 +13,16 @@ const QuizPlayer = ({
   onQuizComplete = (results) => console.log("Quiz Complete:", results),
   confettiOnComplete = true,
   pageSpecificClassName = "quiz-player-page-container", // Generic default
-  // navigateToOnExit = "/dashboard" // Could be a prop
+  isStandaloneQuestion = false, // New prop for single question display mode
+  initialQuestion = null, // New prop for the question to display
+  showOptionPrefixes = true, // Whether to show A, B, C, D
+  // navigateToOnExit = "/dashboard"
 }) => {
   const navigate = useNavigate();
 
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  // Initialize questions state based on mode
+  const [questions, setQuestions] = useState(isStandaloneQuestion && initialQuestion ? [initialQuestion] : []);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // Always 0 for standalone
   const [userAnswers, setUserAnswers] = useState({});
   const [currentScore, setCurrentScore] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState(null);
@@ -33,13 +37,26 @@ const QuizPlayer = ({
   const timerIntervalRef = useRef(null);
 
   useEffect(() => {
-    // Start the quiz as soon as the component mounts with valid apiParams
-    // This replaces the individual handleStartPractice/handleStartTest from the parent
-    handleStartQuiz();
-  }, [apiParams]); // Re-fetch if apiParams change (e.g. new quiz selected)
+    if (!isStandaloneQuestion) {
+      // Start the quiz as soon as the component mounts with valid apiParams
+      handleStartQuiz();
+    } else if (initialQuestion) {
+      // For standalone, if initialQuestion is provided, set it up
+      setQuestions([initialQuestion]);
+      setCurrentQuestionIndex(0);
+      // Potentially set userAnswers if initialQuestion includes selection/correctness info for display
+      if (initialQuestion.selectedOption && initialQuestion.isCorrect !== undefined) {
+         setUserAnswers({ 0: { selected: initialQuestion.selectedOption, correct: initialQuestion.isCorrect } });
+      } else if (initialQuestion.correct_answer && initialQuestion.options?.includes(initialQuestion.correct_answer)) {
+        // If we want to show the correct answer by default in standalone display mode
+        // setUserAnswers({ 0: { selected: initialQuestion.correct_answer, correct: true } });
+      }
+      setIsLoading(false); // Not loading from API in this mode
+    }
+  }, [apiParams, isStandaloneQuestion, initialQuestion]);
 
   useEffect(() => {
-    if (sessionStartTime && !showResults) {
+    if (sessionStartTime && !showResults && !isStandaloneQuestion) { // Timer only for full quiz mode
       timerIntervalRef.current = setInterval(() => {
         setTimeElapsed(Math.floor((Date.now() - sessionStartTime) / 1000));
       }, 1000);
@@ -56,8 +73,11 @@ const QuizPlayer = ({
   };
 
   const handleStartQuiz = async () => {
+    if (isStandaloneQuestion) return; // Don't fetch if displaying a single question
+
     if (!apiParams || apiParams.numQuestions <= 0) {
       setError("Invalid quiz parameters provided.");
+      setIsLoading(false); // Ensure loading is stopped
       return;
     }
     setIsLoading(true);
@@ -93,11 +113,13 @@ const QuizPlayer = ({
   };
 
   const handleOptionSelect = (option) => {
-    if (userAnswers[currentQuestionIndex] && showImmediateFeedback) return; // Already answered (for practice mode)
-    if (userAnswers[currentQuestionIndex] && !showImmediateFeedback) return; // Already answered (for test mode - allow change until section submitted? No, typical tests lock in answer)
-
+    if (isStandaloneQuestion) return; // No interaction in standalone display mode
 
     const currentQuestion = questions[currentQuestionIndex];
+    // Allow re-selection only if immediate feedback is not shown (test mode before submission)
+    // For this version, if an answer exists for the current question, don't allow change.
+    if (userAnswers[currentQuestionIndex]) return;
+
     const isCorrect = option === currentQuestion.correct_answer;
 
     let newScore = currentScore;
@@ -141,20 +163,19 @@ const QuizPlayer = ({
   // For now, QuizPlayer auto-starts. Parent can unmount/remount to restart.
 
   // --- Render Logic ---
-  if (isLoading) {
+  if (isLoading && !isStandaloneQuestion) { // Only show full page loader for actual quiz loading
     return <div className={`page-container ${pageSpecificClassName}`}><p className="loading-message">Loading quiz...</p></div>;
   }
-  if (error) {
+  if (error && !isStandaloneQuestion) { // Only show full page error for actual quiz loading errors
     return (
       <div className={`page-container ${pageSpecificClassName} error-container`}>
         <p className="error-message">Error: {error}</p>
-        {/* Consider a button to navigate back or try again, passed via props? */}
         <button onClick={() => navigate(-1)} className="button button-primary">Go Back</button>
       </div>
     );
   }
 
-  if (showResults) {
+  if (showResults && !isStandaloneQuestion) {
     const percentage = questions.length > 0 ? Math.round((currentScore / questions.length) * 100) : 0;
     return (
       <div className={`page-container ${pageSpecificClassName} results-screen`}>
@@ -166,54 +187,52 @@ const QuizPlayer = ({
           {questions.length > 0 && (
             <button onClick={() => { setIsReviewMode(true); setReviewQuestionIndex(0); }} className="button button-info">Review Answers</button>
           )}
-          {/* "Practice Again" or "Take Another Test" would typically be handled by the parent component
-              by re-rendering QuizPlayer or changing its props, or navigating.
-              For simplicity, a "Back to Dashboard" is provided here.
-          */}
           <button onClick={() => navigate("/dashboard")} className="button button-secondary">Back to Dashboard</button>
         </div>
       </div>
     );
   }
 
-  if (isReviewMode && questions.length > 0) {
+  if (isReviewMode && !isStandaloneQuestion && questions.length > 0) {
     const reviewQ = questions[reviewQuestionIndex];
     const userAnswerForReview = userAnswers[reviewQuestionIndex];
+    // Determine option prefix for review mode
+    const reviewOptionPrefix = (idx) => showOptionPrefixes ? String.fromCharCode(65 + idx) + "." : "";
+
     return (
       <div className={`page-container ${pageSpecificClassName} review-mode-area card`}>
         <h2 className="card-title">Reviewing Question {reviewQuestionIndex + 1} of {questions.length}</h2>
-        <div className="question-text">
-          <p>{reviewQ.question_text}</p>
-          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'latex' && (
-            <div className="visual-asset latex-asset"><BlockMath math={reviewQ.visual_assets.data} /></div>
-          )}
-          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'svg' && (
-            <div className="visual-asset svg-asset" dangerouslySetInnerHTML={{ __html: reviewQ.visual_assets.data }} />
-          )}
-        </div>
-        <div className="options-list quiz-options-container is-review-mode">
-          {reviewQ.options.map((option) => {
-            const isActualCorrect = option === reviewQ.correct_answer;
-            const isSelectedByPlayer = userAnswerForReview && option === userAnswerForReview.selected;
-            const wasPlayerCorrectIfSelected = isSelectedByPlayer && userAnswerForReview.correct;
+        <div className="quiz-question-area">
+          <div className="question-stem-container">
+            <p>{reviewQ.question_text}</p>
+            {reviewQ.visual_assets && reviewQ.visual_assets.type === 'latex' && (
+              <div className="visual-asset latex-asset"><BlockMath math={reviewQ.visual_assets.data} /></div>
+            )}
+            {reviewQ.visual_assets && reviewQ.visual_assets.type === 'svg' && (
+              <div className="visual-asset svg-asset" dangerouslySetInnerHTML={{ __html: reviewQ.visual_assets.data }} />
+            )}
+          </div>
+          <div className="quiz-options-container is-review-mode">
+            {reviewQ.options.map((option, idx) => {
+              const isActualCorrect = option === reviewQ.correct_answer;
+              const isSelectedByPlayer = userAnswerForReview && option === userAnswerForReview.selected;
+              const wasPlayerCorrectIfSelected = isSelectedByPlayer && userAnswerForReview.correct;
 
-            let buttonClass = 'button quiz-option-button';
-            if (isActualCorrect) buttonClass += ' is-revealed-correct';
-            if (isSelectedByPlayer) {
-              buttonClass += ' is-selected';
-              if (!wasPlayerCorrectIfSelected) buttonClass += ' is-revealed-incorrect';
-            }
-            return (
-              <button key={option} className={buttonClass} disabled>
-                {option}
-                {isActualCorrect && !isSelectedByPlayer && <span className="feedback-icon icon-correct"> ✔ Correct Answer</span>}
-                {isSelectedByPlayer && wasPlayerCorrectIfSelected && <span className="feedback-icon icon-correct"> ✓ Your pick</span>}
-                {isSelectedByPlayer && !wasPlayerCorrectIfSelected && (
-                  <span className="feedback-icon icon-incorrect"> ✗ Your pick</span>
-                )}
-              </button>
-            );
-          })}
+              let buttonClass = 'button quiz-option-button';
+              if (isActualCorrect) buttonClass += ' is-revealed-correct';
+              if (isSelectedByPlayer) {
+                buttonClass += ' is-selected';
+                if (!wasPlayerCorrectIfSelected) buttonClass += ' is-revealed-incorrect';
+              }
+              return (
+                <button key={option} className={buttonClass} disabled>
+                  {showOptionPrefixes && <span className="option-prefix">{reviewOptionPrefix(idx)}</span>}
+                  <span className="option-text">{option}</span>
+                  {/* Feedback icons can be part of the text or separate elements if needed */}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="explanation-area review-explanation">
           <h4>Explanation:</h4>
@@ -229,23 +248,38 @@ const QuizPlayer = ({
   }
 
   if (!questions || questions.length === 0) {
-    // This state could occur if API call is successful but returns empty or error was handled by setting empty questions
-    return <div className={`page-container ${pageSpecificClassName}`}><p className="loading-message">No questions available for this quiz.</p></div>;
+     if (isStandaloneQuestion && isLoading) { // Specific loading for standalone if initialQuestion is fetched async by parent
+        return <div className={`page-container ${pageSpecificClassName}`}><p className="loading-message">Loading question...</p></div>;
+     }
+    return <div className={`page-container ${pageSpecificClassName}`}><p className="alert alert-info">No questions available.</p></div>;
   }
 
+  // Logic for both full quiz mode and standalone question display
   const currentQuestion = questions[currentQuestionIndex];
-  const attemptedAnswer = userAnswers[currentQuestionIndex]; // This is where immediate feedback is decided
+  const attemptedAnswer = userAnswers[currentQuestionIndex];
+  const optionPrefix = (idx) => showOptionPrefixes ? String.fromCharCode(65 + idx) + "." : "";
+
+
+  // Standalone question display mode adjustments
+  let optionsContainerClasses = "quiz-options-container";
+  if (isStandaloneQuestion) {
+    optionsContainerClasses += " is-review-mode answers-revealed"; // Treat as if answers are revealed, disable interaction
+  } else if (showImmediateFeedback && attemptedAnswer) {
+    optionsContainerClasses += " answers-revealed";
+  }
+
 
   return (
-    <div className={`page-container ${pageSpecificClassName} question-display-area`}>
-      <div className="session-info card">
-        <p className="question-counter">Question {currentQuestionIndex + 1} of {questions.length}</p>
-        <p className="timer">Time: {formatTime(timeElapsed)}</p>
-      </div>
-      {/* <p className="target-time-info">Target time per question: 1 min 30 secs (Static)</p> */}
+    <div className={`page-container ${pageSpecificClassName} ${isStandaloneQuestion ? 'standalone-question-view' : 'quiz-mode-view'}`}>
+      {!isStandaloneQuestion && (
+        <div className="session-info card">
+          <p className="question-counter">Question {currentQuestionIndex + 1} of {questions.length}</p>
+          <p className="timer">Time: {formatTime(timeElapsed)}</p>
+        </div>
+      )}
 
-      <div className="question-content card">
-        <div className="question-text">
+      <div className="quiz-question-area">
+        <div className="question-stem-container">
           <p>{currentQuestion.question_text}</p>
           {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'latex' && (
             <div className="visual-asset latex-asset"><BlockMath math={currentQuestion.visual_assets.data} /></div>
@@ -255,52 +289,69 @@ const QuizPlayer = ({
           )}
         </div>
 
-        <div className={`options-list quiz-options-container ${showImmediateFeedback && attemptedAnswer ? 'answers-revealed' : ''}`}>
-          {currentQuestion.options.map((option) => {
+        <div className={optionsContainerClasses}>
+          {currentQuestion.options.map((option, idx) => {
             let buttonClass = 'button quiz-option-button';
-            if (attemptedAnswer && showImmediateFeedback) {
-              const isActualCorrect = option === currentQuestion.correct_answer;
+            const isActualCorrect = option === currentQuestion.correct_answer;
+
+            if (isStandaloneQuestion) {
+                // For standalone, highlight correct if provided, and selected if provided
+                if (initialQuestion?.correct_answer === option) buttonClass += ' is-revealed-correct';
+                if (initialQuestion?.selectedOption === option) {
+                    buttonClass += ' is-selected';
+                    if (initialQuestion?.isCorrect === false) buttonClass += ' is-revealed-incorrect';
+                    // if true, is-revealed-correct already handles it
+                }
+            } else if (attemptedAnswer) { // Full quiz mode with an attempt
               const isSelectedByPlayer = option === attemptedAnswer.selected;
-              if (isSelectedByPlayer) {
-                buttonClass += ' is-selected';
-                buttonClass += attemptedAnswer.correct ? ' is-revealed-correct' : ' is-revealed-incorrect';
-              } else if (isActualCorrect) {
-                buttonClass += ' is-revealed-correct';
+              if (showImmediateFeedback) {
+                if (isSelectedByPlayer) {
+                  buttonClass += ' is-selected';
+                  buttonClass += attemptedAnswer.correct ? ' is-revealed-correct' : ' is-revealed-incorrect';
+                } else if (isActualCorrect) {
+                  buttonClass += ' is-revealed-correct'; // Show correct answer if user was wrong
+                }
+              } else { // Test mode - no immediate feedback, only show selection
+                if (isSelectedByPlayer) buttonClass += ' is-selected-pending';
               }
-            } else if (attemptedAnswer && !showImmediateFeedback && option === attemptedAnswer.selected) {
-                // Test mode: only show 'is-selected-pending' or a generic 'is-selected'
-                // The existing 'is-selected' with box-shadow from App.css might be enough if `font-weight: bold` is removed or overridden
-                 buttonClass += ' is-selected-pending'; // Or a more neutral 'is-selected-for-test'
-            } else if (!attemptedAnswer && userAnswers[currentQuestionIndex]?.selected === option) {
-                // This is for test mode if we allow changing answers before final submit and want to mark current selection
-                 buttonClass += ' is-selected-pending';
             }
+            // No 'else if (!attemptedAnswer && userAnswers[currentQuestionIndex]?.selected === option)'
+            // because that state is covered by `is-selected-pending` if `!showImmediateFeedback`
+            // or by immediate feedback if `showImmediateFeedback`
 
             return (
-              <button key={option} className={buttonClass} onClick={() => handleOptionSelect(option)} disabled={showImmediateFeedback && !!attemptedAnswer}>
-                {option}
+              <button
+                key={option}
+                className={buttonClass}
+                onClick={() => handleOptionSelect(option)}
+                disabled={isStandaloneQuestion || (showImmediateFeedback && !!attemptedAnswer)}
+              >
+                {showOptionPrefixes && <span className="option-prefix">{optionPrefix(idx)}</span>}
+                <span className="option-text">{option}</span>
               </button>
             );
           })}
         </div>
-
-        {showImmediateFeedback && attemptedAnswer && (
-          <div className="explanation-area">
-            <h4>Explanation:</h4>
-            <p>{currentQuestion.explanation}</p>
-          </div>
-        )}
       </div>
 
-      <div className="navigation-buttons">
-        <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="button button-secondary">Previous</button>
-        {currentQuestionIndex === questions.length - 1 ? (
-          <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-success">Finish</button>
-        ) : (
-          <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-primary">Next</button>
-        )}
-      </div>
-      {/* Stop Quiz button could be added by parent or here if needed, e.g., navigate(-1) or a specific prop function */}
+      {showImmediateFeedback && attemptedAnswer && !isStandaloneQuestion && (
+        <div className="explanation-area">
+          <h4>Explanation:</h4>
+          <p>{currentQuestion.explanation}</p>
+        </div>
+      )}
+
+      {!isStandaloneQuestion && (
+        <div className="navigation-buttons">
+          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="button button-secondary">Previous</button>
+          {currentQuestionIndex === questions.length - 1 ? (
+            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-success">Finish</button>
+          ) : (
+            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-primary">Next</button>
+          )}
+        </div>
+      )}
+      {/* Stop Quiz button could be added by parent or here if needed */}
     </div>
   );
 };

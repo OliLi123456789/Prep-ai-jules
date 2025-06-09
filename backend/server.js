@@ -16,6 +16,11 @@ app.use(express.json());
 // --- AI Questions Function using DeepSeek API ---
 const getAIQuestions = async (params) => {
   console.log("Attempting to generate questions with params:", params);
+
+  // Validate module1Performance if module is 2
+  if (params.module === 2 && params.module1Performance && !["high", "medium", "low"].includes(params.module1Performance)) {
+    return { error: true, message: "Invalid module1Performance value. Must be 'high', 'medium', or 'low'." };
+  }
   
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -26,11 +31,45 @@ const getAIQuestions = async (params) => {
     };
   }
 
+  let difficultyInstruction = "";
+  if (params.testType === "SAT") {
+    if (params.module === 2 && params.module1Performance) {
+      if (params.module1Performance === "high") {
+        difficultyInstruction = "advanced difficulty ";
+      } else if (params.module1Performance === "low") {
+        difficultyInstruction = "foundational difficulty ";
+      } else if (params.module1Performance === "medium") {
+        difficultyInstruction = "medium difficulty ";
+      }
+    }
+    // Check if topic is Math (or subTopic implies Math for SAT)
+    // For simplicity, let's assume params.topic would be "Math" for SAT Math.
+    // A more robust check might involve looking up the topic in testStructures.json if subTopic is more granular.
+    if (params.topic === "Math" || (params.subTopic && params.subTopic.toLowerCase().includes("math"))) {
+      const K = 3; // Last K questions to be harder
+      if (
+        params.questionNumberStart &&
+        params.totalQuestionsInModule &&
+        params.numQuestions &&
+        params.questionNumberStart + params.numQuestions >= params.totalQuestionsInModule - K + 1
+      ) {
+        // Append to existing difficulty or set if empty
+        difficultyInstruction += (difficultyInstruction ? "" : "") + "Ensure these final questions are notably challenging for the current scope. ";
+      }
+    }
+  }
+
+  const testTypeContext = params.testType || 'general';
+  const moduleContext = params.module ? ` Module ${params.module}` : '';
+  const fullTestContext = `${testTypeContext}${moduleContext}`;
+
   const apiUrl = 'https://api.deepseek.com/chat/completions';
-  const promptString = `Generate ${params.numQuestions} questions for an ${params.topic} test, focusing on ${params.subTopic}. Return the output as a VALID JSON array where each element is an object with the following keys: 'question_text' (string), 'options' (array of 4 strings), 'correct_answer' (string - one of the options), 'explanation' (string), and optionally 'visual_assets'. If 'visual_assets' is used, it must be an object with 'type' (string, either 'latex' or 'svg') and 'data' (string, the LaTeX or SVG code). Ensure no extra text or markdown formatting outside the JSON array. The entire response should be only the JSON array itself.`;
+  const promptString = `Generate ${params.numQuestions} ${difficultyInstruction}questions for an ${params.topic} test (specifically for ${fullTestContext}), focusing on ${params.subTopic}. Return the output as a VALID JSON array where each element is an object with the following keys: 'question_text' (string), 'options' (array of 4 strings), 'correct_answer' (string - one of the options), 'explanation' (string), and optionally 'visual_assets'. If 'visual_assets' is used, it must be an object with 'type' (string, either 'latex' or 'svg') and 'data' (string, the LaTeX or SVG code). Ensure no extra text or markdown formatting outside the JSON array. The entire response should be only the JSON array itself.`;
+
+  console.log("Constructed Prompt String:", promptString); // Log the prompt
 
   const requestBody = {
-    model: "deepseek-chat", // Or "deepseek-coder" if more appropriate for structured output
+    model: "deepseek-chat",
     messages: [
       { role: "system", content: "You are an expert test question writer. You generate questions in a precise JSON format as instructed. Do not include any markdown formatting like ```json or ``` around the JSON output." },
       { role: "user", content: promptString }
@@ -82,21 +121,49 @@ const getAIQuestions = async (params) => {
 };
 
 // --- API Endpoint ---
-app.post('/api/generate-questions', async (req, res) => { // Make endpoint async
-  const { testType, topic, subTopic, numQuestions } = req.body;
+app.post('/api/generate-questions', async (req, res) => {
+  const {
+    testType,
+    topic,
+    subTopic,
+    numQuestions,
+    module, // New optional param
+    module1Performance, // New optional param
+    questionNumberStart, // New optional param
+    totalQuestionsInModule // New optional param
+  } = req.body;
 
   if (!topic || !subTopic || !numQuestions) {
-    return res.status(400).json({ error: true, message: 'Missing required parameters: topic, subTopic, numQuestions' });
+    return res.status(400).json({ error: true, message: 'Missing required parameters: topic, subTopic, numQuestions.' });
   }
-  if (typeof numQuestions !== 'number' || numQuestions <= 0 || numQuestions > 10) { // Max 10 for safety/cost
+  if (typeof numQuestions !== 'number' || numQuestions <= 0 || numQuestions > 10) {
       return res.status(400).json({ error: true, message: 'numQuestions must be a positive number, max 10.' });
   }
+  if (module && (typeof module !== 'number' || ![1, 2].includes(module))) {
+    return res.status(400).json({ error: true, message: 'Invalid module number. Must be 1 or 2.' });
+  }
+  if (module === 2 && module1Performance && !["high", "medium", "low"].includes(module1Performance)) {
+    return res.status(400).json({ error: true, message: "Invalid module1Performance value. Must be 'high', 'medium', or 'low'." });
+  }
+   if (module === 2 && !module1Performance) {
+    // console.warn("Warning: Module 2 requested for SAT without module1Performance. Difficulty may not be adapted.");
+    // Proceeding without specific difficulty for module 2 if performance not given, or could error:
+    // return res.status(400).json({ error: true, message: "module1Performance is required for Module 2." });
+  }
 
 
-  const result = await getAIQuestions({ testType, topic, subTopic, numQuestions });
+  const result = await getAIQuestions({
+    testType,
+    topic,
+    subTopic,
+    numQuestions,
+    module,
+    module1Performance,
+    questionNumberStart,
+    totalQuestionsInModule
+  });
 
   if (result.error) {
-    // Determine status code based on error type if desired, otherwise default to 500
     let statusCode = 500;
     if (result.message.includes("API key") || result.message.includes("configured")) {
         statusCode = 503; // Service Unavailable (key not configured)
@@ -112,6 +179,85 @@ app.post('/api/generate-questions', async (req, res) => { // Make endpoint async
     res.status(404).json({ error: true, message: 'AI generated no questions for the given criteria.' });
   } else { // Should be caught by result.error, but as a fallback
     res.status(500).json({ error: true, message: 'An unexpected issue occurred while generating questions.' });
+  }
+});
+
+// --- AI Guided Solution Endpoint ---
+app.post('/api/get-guided-solution', async (req, res) => {
+  const { questionText, options, correctAnswer, topic, subTopic } = req.body;
+
+  // 1. Validation
+  if (!questionText || !topic || !subTopic) {
+    return res.status(400).json({
+      error: true,
+      message: 'Missing required parameters: questionText, topic, subTopic.'
+    });
+  }
+
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.error("Guided Solution: DeepSeek API key (DEEPSEEK_API_KEY) is not configured.");
+    return res.status(503).json({ error: true, message: "AI service API key not configured." });
+  }
+
+  // 2. Prompt Construction
+  let userPrompt = `You are an expert tutor. Given the following question, provide a detailed, step-by-step explanation of how to arrive at the solution. Explain each step clearly. If the question has options or a known correct answer, use them to guide your explanation towards the solution.
+
+Question: "${questionText}"
+`;
+  if (options && Array.isArray(options) && options.length > 0) {
+    userPrompt += `Options: ${options.join(', ')}\n`;
+  }
+  if (correctAnswer) {
+    userPrompt += `The correct answer is: "${correctAnswer}"\n`;
+  }
+  userPrompt += "Provide your step-by-step solution:";
+
+  let systemPromptContent = `You are a friendly, patient, and encouraging AI Tutor specializing in SAT and ACT preparation. Your goal is to help students deeply understand concepts, effectively break down difficult problems step-by-step, and offer clear, actionable explanations. Focus on providing a clear, logical, and easy-to-follow path to the solution.`;
+
+  if (subTopic.toLowerCase().includes('calculator')) {
+    userPrompt = `This question is related to calculator usage for ${topic} - ${subTopic}.\n${userPrompt}`;
+    userPrompt += `\n\nIf a graphing calculator (like a TI-84 or similar) is beneficial for solving this problem, please explicitly state so. Then, provide specific step-by-step instructions on how to use such a calculator to find the solution. Mention specific functions, menus, or button sequences where appropriate. If a calculator is not the primary tool or offers no significant advantage, briefly state that and then provide the conceptual step-by-step solution.`;
+    // Optional: Modify system prompt slightly for calculator-focused queries if needed
+    // systemPromptContent = `You are an expert tutor specializing in calculator usage for standardized tests...`;
+  }
+
+  // 3. LLM Interaction
+  const apiUrl = 'https://api.deepseek.com/chat/completions';
+  const requestBody = {
+    model: "deepseek-chat",
+    messages: [
+      { role: "system", content: systemPromptContent },
+      { role: "user", content: userPrompt }
+    ],
+    temperature: 0.4, // Lower for more factual, step-by-step output
+    max_tokens: 2000,
+  };
+
+  try {
+    console.log("Sending request to DeepSeek API for guided solution...");
+    const deepseekResponse = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const guidance = deepseekResponse.data.choices[0].message.content;
+
+    // 4. Response Handling
+    res.json({ guidance: guidance.trim() });
+
+  } catch (apiError) {
+    console.error("Error calling DeepSeek API for guided solution:", apiError.response ? apiError.response.data : apiError.message);
+    let errorMessage = "Error communicating with AI guidance service.";
+    if (apiError.response && apiError.response.data && apiError.response.data.error && apiError.response.data.error.message) {
+        errorMessage = `AI Service Error: ${apiError.response.data.error.message}`;
+    } else if (apiError.message) {
+        errorMessage = apiError.message;
+    }
+    const statusCode = apiError.response ? apiError.response.status : 500;
+    res.status(statusCode).json({ error: true, message: errorMessage, details: apiError.response ? apiError.response.data : null });
   }
 });
 

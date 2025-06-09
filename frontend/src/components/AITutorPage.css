@@ -1,131 +1,322 @@
 /* AITutorPage.css */
 .ai-tutor-page-container.page-container {
-  max-width: 800px; /* Or your preferred max width for chat */
+  max-width: 900px; /* Allow more space for the new layout */
 }
 
-.chat-card {
-  /* .card global styles are applied */
-  padding: 0; /* Override card padding to have messages flush to edges if desired, or keep for internal padding */
-  display: flex;
-  flex-direction: column;
-  height: calc(80vh - var(--spacing-unit) * 4); /* Example height, adjust as needed, considering header/footer */
-  max-height: 700px; /* Max height for very tall screens */
+.topic-selection-area.card {
+  /* Global .card styles apply */
+  margin-bottom: calc(var(--spacing-unit) * 3); /* 24px */
+  padding: calc(var(--spacing-unit) * 2); /* 16px */
 }
 
-.chat-messages-area {
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: var(--spacing-unit) * 2; /* 16px */
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-unit) * 1.5; /* 12px between messages */
-}
-
-.chat-message {
-  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5); /* 8px 12px */
-  border-radius: calc(var(--border-radius-base) * 2); /* More rounded bubbles */
-  max-width: 75%;
-  word-wrap: break-word;
-  line-height: 1.4;
-}
-
-.chat-message.user {
-  background-color: var(--primary-color);
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: var(--spacing-unit) * 0.5; /* Flat edge for user bubble */
-}
-
-.chat-message.ai {
-  background-color: var(--light-color);
-  color: var(--text-color);
-  align-self: flex-start;
-  border: 1px solid var(--border-color);
-  border-bottom-left-radius: var(--spacing-unit) * 0.5; /* Flat edge for AI bubble */
-}
-
-.chat-message .message-text {
-  margin: 0;
-  white-space: pre-wrap; /* Preserve line breaks from AI response */
-}
-
-.typing-indicator {
+.topic-selection-area .card-title {
+  /* Global .card-title styles apply */
   text-align: center;
-  padding: var(--spacing-unit); /* 8px */
+  margin-bottom: calc(var(--spacing-unit) * 2.5); /* 20px */
+}
+
+.selection-level {
+  margin-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+  padding-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+  border-bottom: 1px dashed var(--border-color);
+}
+.selection-level:last-of-type { /* Last actual selection level before the display path */
+   /* border-bottom: none; */ /* Keep border for visual separation before selection path */
+}
+
+
+.selection-level-title {
+  font-size: 1.15rem; /* Made slightly larger */
+  color: var(--text-muted-color);
+  margin-bottom: calc(var(--spacing-unit) * 1.5); /* 12px */
+  font-weight: 600;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-unit); /* 8px */
+}
+
+.selection-button.button {
+  background-color: var(--light-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  font-weight: 500;
+  padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.5); /* 6px 12px */
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; /* Smooth transition */
+}
+.selection-button.button:hover:not(.active) { /* Hover only if not active */
+  background-color: #e2e6ea;
+  border-color: #adb5bd;
+  color: var(--primary-color);
+}
+.selection-button.button.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+  font-weight: 600; /* Bolder when active */
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 0, 123, 255), 0.35); /* Use RGB for box-shadow color */
+}
+/* Ensure primary-color-rgb is defined in :root if not already, or use a fixed color */
+:root {
+  --primary-color-rgb: 0, 123, 255; /* Example for Bootstrap blue */
+}
+
+
+.current-selection-display {
+  margin-top: calc(var(--spacing-unit) * 2.5); /* 20px, after the last selection level's border */
+  padding: var(--spacing-unit) * 1.5; /* 12px */
+  background-color: #e9f5ff; /* Light blueish background */
+  border: 1px solid #b3d7ff; /* Corresponding border */
+  border-radius: var(--border-radius-base);
+  text-align: left; /* Align text to left for better readability */
+}
+.current-selection-display p {
+  margin: 0 0 calc(var(--spacing-unit) * 0.5) 0;
+  font-weight: 600;
+  color: var(--dark-color); /* Darker color for better contrast */
+}
+.current-selection-display p:last-child {
+  margin-bottom: 0;
+}
+.current-selection-display p.topic-description {
+  font-weight: normal;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-muted-color);
+  margin-top: var(--spacing-unit); /* Space between path and description */
+}
+
+.actions-and-content-area {
+  display: grid;
+  grid-template-columns: 1fr; /* Stack on small screens by default */
+  gap: calc(var(--spacing-unit) * 2.5); /* 20px gap */
+  margin-top: calc(var(--spacing-unit) * 3); /* 24px */
+}
+
+@media (min-width: 900px) { /* Apply side-by-side layout for larger screens */
+  .actions-and-content-area {
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+  }
+}
+
+.action-section.card {
+  /* Global .card styles apply */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(var(--spacing-unit) * 2); /* 16px */
+}
+.action-section .card-title.section-title {
+  /* Global .card-title styles apply */
+  font-size: 1.4rem; /* Prominent section titles */
+  color: var(--primary-color);
+  text-align: center;
+  width: 100%;
+  margin-bottom: calc(var(--spacing-unit) * 2); /* 16px */
+}
+
+.action-button.button {
+  /* Global .button and color variants (.button-primary, .button-success) apply */
+  width: 90%;
+  max-width: 320px;
+  padding: calc(var(--spacing-unit) * 1.25) var(--spacing-unit); /* 10px, adjust to content */
+  font-size: 1.05rem;
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px space below button */
+}
+.action-button.button:disabled {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    opacity: 0.5; /* More prominent disabled state */
+}
+
+
+.content-display-box {
+  width: 100%;
+  margin-top: var(--spacing-unit); /* 8px, space between button and content if both shown */
+  padding: var(--spacing-unit) * 1.5;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  background-color: #fdfdfd; /* Slightly off-white */
+  min-height: 180px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+}
+.content-display-box h4 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+  color: var(--secondary-color); /* Muted title for content box */
+  font-size: 1rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-unit) * 0.75; /* 6px */
+}
+.content-display-box p {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-color);
+  white-space: pre-wrap;
+  margin-bottom: var(--spacing-unit); /* Add default bottom margin for paragraphs inside */
+}
+.content-display-box p:last-child {
+  margin-bottom: 0;
+}
+.content-display-box p:empty::before { /* Placeholder text for empty content */
+    content: "Content will appear here once generated.";
+    color: var(--text-muted-color);
+    font-style: italic;
+}
+
+/* Styling for structured learning content */
+.learn-content-display h3 { /* Module Title */
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: var(--spacing-unit) * 1.5;
+}
+.learn-content-display p.module-intro {
+  font-style: italic;
+  color: var(--text-muted-color);
+  margin-bottom: var(--spacing-unit) * 2;
+}
+.learn-content-display h4 { /* Section sub-titles like "Key Concepts", "Practice Questions" */
+  font-size: 1.2rem;
+  color: var(--dark-color);
+  margin-top: var(--spacing-unit) * 2.5;
+  margin-bottom: var(--spacing-unit) * 1.5;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-unit) * 0.5;
+}
+.learning-module-item {
+  margin-bottom: var(--spacing-unit) * 2;
+  padding-left: var(--spacing-unit);
+  border-left: 3px solid var(--primary-color-light, #cfe2ff); /* Light border for items */
+}
+.learning-module-item p {
+  margin-bottom: var(--spacing-unit) * 0.75;
+}
+.learning-module-item p strong { /* Concept name or Question prefix */
+  color: var(--primary-color);
+}
+.learning-module-item em { /* Example or Explanation prefix */
+  color: var(--text-muted-color);
+}
+.practice-question-display ul {
+  list-style-type: disc;
+  margin-left: var(--spacing-unit) * 2.5;
+  margin-bottom: var(--spacing-unit);
+}
+.practice-question-display ul li {
+  margin-bottom: var(--spacing-unit) * 0.5;
+}
+
+/* Styles for Guided Practice section content */
+.guided-practice-display .practice-question-text {
+  font-weight: bold;
+  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+.guided-practice-display .practice-options-list {
+  list-style-position: inside;
+  padding-left: var(--spacing-unit);
+  margin-bottom: var(--spacing-unit) * 2; /* 16px */
+}
+.guided-practice-display .practice-options-list li {
+  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
+  font-size: 0.95rem;
+}
+.guided-practice-display h5 { /* "Step-by-Step Guidance" heading */
+  font-size: 1.1rem;
+  color: var(--text-muted-color);
+  margin-top: var(--spacing-unit) * 2.5; /* 20px */
+  margin-bottom: var(--spacing-unit);    /* 8px */
+  font-weight: 600;
+}
+.guided-practice-display .guidance-text {
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  background-color: #f9f9f9; /* Very light grey for guidance block */
+  padding: var(--spacing-unit) * 1.5; /* 12px */
+  border-radius: var(--border-radius-base);
+  border: 1px solid var(--border-color);
+}
+.content-placeholder-message { /* Placeholder for empty content sections */
+  text-align: center;
+  padding: var(--spacing-unit) * 2;
   color: var(--text-muted-color);
   font-style: italic;
 }
 
-.chat-error.error-message { /* Specific styling for chat error if needed */
-  /* Global .error-message styles apply, this is for overrides */
-  margin: var(--spacing-unit) * 2; /* Add margin if it's inside the card padding area */
-  padding: var(--spacing-unit) * 1.5;
+/* Styles for SAT Adaptive Mode UI elements */
+.adaptive-mode-info {
+  font-size: 0.85rem;
+  color: var(--info-color);
+  font-weight: bold;
+  text-align: center;
+  margin-top: calc(var(--spacing-unit) * 1.5);
+  margin-bottom: calc(var(--spacing-unit) * 0.5); /* Space before question or performance buttons */
+  padding: var(--spacing-unit) * 0.5;
+  background-color: var(--primary-color-light, #e7f3ff); /* Use a light info background */
+  border-radius: var(--border-radius-base);
 }
 
-.chat-input-form {
-  display: flex;
-  padding: var(--spacing-unit) * 2; /* 16px */
-  border-top: 1px solid var(--border-color);
-  background-color: #fff; /* Ensure it's on top of messages area bg if different */
-}
-
-.chat-input.form-control {
-  flex-grow: 1;
-  margin-right: var(--spacing-unit); /* 8px */
-  resize: none; /* If it were a textarea */
-}
-
-.send-button.button {
-  /* Global button styles apply */
-  white-space: nowrap; /* Prevent "Send" from wrapping */
-}
-
-.tutor-capabilities-info {
-  padding: var(--spacing-unit) calc(var(--spacing-unit) * 2); /* 8px 16px */
+.performance-simulation-buttons.card {
+  margin-top: var(--spacing-unit) * 2;
+  padding: var(--spacing-unit) * 2;
+  text-align: center;
   background-color: var(--light-color);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  font-size: 0.875rem; /* 14px */
+}
+.performance-simulation-buttons h4 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-unit) * 2;
+  font-size: 1.1rem;
   color: var(--text-muted-color);
+}
+.performance-simulation-buttons .button {
+  margin: var(--spacing-unit) * 0.5;
+  /* Uses global .button and .button-outline-primary */
+}
+
+
+/* Loading/Error messages (global styles from App.css apply) */
+.ai-tutor-page-container .loading-message,
+.ai-tutor-page-container .error-message {
+  margin: calc(var(--spacing-unit) * 2) 0; /* 16px top/bottom margin */
   text-align: center;
 }
-.tutor-capabilities-info p {
-  margin: 0;
-  line-height: 1.4;
-}
-.tutor-capabilities-info strong {
-  color: var(--info-color); /* Or var(--primary-color) */
-}
 
-
-/* Responsive adjustments for chat */
+/* Responsive adjustments */
 @media (max-width: 768px) {
-  .chat-card {
-    height: calc(90vh - var(--spacing-unit) * 4); /* Take more height on mobile */
+  .button-group {
+    justify-content: center; /* Center buttons on smaller screens */
   }
-  .chat-message {
-    max-width: 85%;
+  .selection-button.button {
+    font-size: 0.9rem; /* Slightly smaller buttons */
   }
-  .chat-input-form {
-    padding: var(--spacing-unit) * 1.5; /* 12px */
+  .action-button.button {
+    width: 100%;
+    font-size: 1rem;
   }
 }
 
 @media (max-width: 480px) {
-    .chat-messages-area {
-        padding: var(--spacing-unit) * 1.5; /* 12px */
-    }
-     .chat-message {
-        padding: calc(var(--spacing-unit)*0.75) var(--spacing-unit) ; /* 6px 8px */
-        font-size: 0.95rem;
-    }
-    .chat-input-form {
-        padding: var(--spacing-unit); /* 8px */
-    }
-    .chat-input.form-control {
-        padding: calc(var(--spacing-unit) * 0.75); /* 6px */
-    }
-    .send-button.button {
-        padding: calc(var(--spacing-unit) * 0.75); /* 6px */
-    }
+  .topic-selection-area .card-title {
+    font-size: 1.3rem;
+  }
+  .selection-level-title {
+    font-size: 1rem;
+  }
+  .selection-button.button {
+    width: 100%; /* Stack selection buttons */
+    margin-bottom: var(--spacing-unit) * 0.5; /* Add a bit of space if they stack */
+  }
+   .current-selection-display {
+    padding: var(--spacing-unit);
+    font-size: 0.9rem;
+  }
+  .action-section .card-title.section-title {
+    font-size: 1.2rem;
+  }
 }

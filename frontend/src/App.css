@@ -376,6 +376,201 @@ body { /* Already in index.css, but good to keep in mind for global theme */
   }
 }
 
+/* === Digital Test UI Inspired Quiz Styles === */
+
+/* Main container for a question, including stem and options */
+.quiz-question-area {
+  display: flex;
+  flex-direction: column; /* Default stack: question stem, then options */
+  gap: var(--spacing-unit) * 2; /* Space between stem and options block */
+  margin-bottom: var(--spacing-unit) * 2; /* Space below each question block */
+}
+
+/* Container for the question text and any visual assets */
+.question-stem-container {
+  background-color: #fff; /* Optional: Slight off-white or white background for question area */
+  padding: var(--spacing-unit) * 2; /* 16px */
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  line-height: 1.7; /* Improved readability for question text */
+  font-size: 1.1rem; /* Slightly larger font for question text */
+}
+.question-stem-container p {
+  margin-bottom: var(--spacing-unit); /* Space between paragraphs in question */
+}
+.question-stem-container p:last-child {
+  margin-bottom: 0;
+}
+
+/* Visual assets within the question stem */
+.visual-asset { /* General styling for visual assets if needed */
+  margin: var(--spacing-unit) * 1.5 0; /* 12px */
+  padding: 0; /* Reset padding if card-like styling not desired here */
+  border: none; /* Reset border */
+  background-color: transparent; /* Transparent background */
+  text-align: center; /* Center SVGs or LaTeX blocks */
+}
+.latex-asset { /* KaTeX output is usually inline-block or block with its own styling */
+  font-size: 1.2rem; /* Ensure LaTeX is legible */
+}
+.svg-asset svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--spacing-unit) auto; /* Center SVG and add some margin */
+}
+
+
+/* Container for all options */
+.quiz-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-unit) * 1.5; /* 12px gap between options */
+}
+
+/* Individual option button styling - enhanced for official test look */
+.quiz-option-button {
+  display: flex; /* Allows for aligning prefix (A) and text */
+  align-items: center;
+  text-align: left;
+  background-color: #fff; /* Options typically on white background */
+  border: 2px solid var(--border-color); /* More prominent border */
+  color: var(--text-color);
+  font-weight: normal;
+  padding: var(--spacing-unit) * 1.5; /* 12px padding */
+  border-radius: var(--border-radius-base);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%; /* Ensure full width */
+  min-height: 50px; /* Minimum height for better clickability */
+}
+.quiz-option-button:hover:not(:disabled):not(.is-selected-pending):not(.is-revealed-correct):not(.is-revealed-incorrect) {
+  background-color: var(--light-color); /* Subtle hover for unselected, non-revealed */
+  border-color: var(--primary-color); /* Highlight border on hover */
+}
+.quiz-option-button:disabled {
+    cursor: default; /* Not pointer, but not not-allowed as it's for display in review */
+    /* Opacity is handled by specific feedback states when in review mode */
+}
+.quiz-option-button .option-prefix {
+  font-weight: bold;
+  margin-right: var(--spacing-unit) * 1.5; /* 12px */
+  padding: calc(var(--spacing-unit)*0.5) calc(var(--spacing-unit)*0.75);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  background-color: var(--light-color);
+  min-width: 20px; /* Ensure consistent prefix width */
+  text-align: center;
+}
+.quiz-option-button .option-text {
+  flex-grow: 1;
+  line-height: 1.5;
+}
+
+
+/* State: User has selected this option (before answer is revealed) */
+.quiz-option-button.is-selected-pending {
+  border-color: var(--primary-color);
+  background-color: #e7f3ff; /* Light primary background for selection */
+  box-shadow: 0 0 0 2px var(--primary-color);
+  font-weight: bold;
+}
+.quiz-option-button.is-selected-pending .option-prefix {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+
+
+/* State: This option is revealed as the correct answer */
+.quiz-option-button.is-revealed-correct {
+  background-color: #d1e7dd;
+  border-color: var(--success-color);
+  color: #0f5132;
+}
+.quiz-option-button.is-revealed-correct .option-prefix {
+  background-color: var(--success-color);
+  color: #fff;
+  border-color: var(--success-color);
+}
+
+/* State: User selected this, and it's the correct answer */
+.quiz-option-button.is-selected.is-revealed-correct {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 2px var(--success-color) inset;
+  /* Prefix already styled by .is-revealed-correct */
+}
+
+/* State: This option is revealed as an incorrect answer (typically when user selected it) */
+.quiz-option-button.is-revealed-incorrect {
+  background-color: #f8d7da;
+  border-color: var(--danger-color);
+  color: #842029;
+}
+.quiz-option-button.is-revealed-incorrect .option-prefix {
+  background-color: var(--danger-color);
+  color: #fff;
+  border-color: var(--danger-color);
+}
+
+
+/* State: User selected this, and it's an incorrect answer */
+.quiz-option-button.is-selected.is-revealed-incorrect {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 2px var(--danger-color) inset;
+   /* Prefix already styled by .is-revealed-incorrect */
+}
+
+/* Styles for options in a review mode or when answers are all revealed and disabled */
+/* General quiz-option-button:disabled handles cursor and some opacity */
+.quiz-options-container.is-review-mode .quiz-option-button,
+.quiz-options-container.answers-revealed .quiz-option-button {
+  opacity: 1 !important;
+  cursor: default !important;
+}
+/* By default, non-selected, non-correct options in review should just be neutral */
+.quiz-options-container.is-review-mode .quiz-option-button:not(.is-revealed-correct):not(.is-selected),
+.quiz-options-container.answers-revealed .quiz-option-button:not(.is-revealed-correct):not(.is-selected) {
+  background-color: #fff; /* Keep it plain white or very light grey */
+  border-color: var(--border-color);
+  color: var(--text-muted-color);
+  opacity: 0.7; /* Dim unselected, non-correct answers slightly */
+}
+.quiz-options-container.is-review-mode .quiz-option-button:not(.is-revealed-correct):not(.is-selected) .option-prefix,
+.quiz-options-container.answers-revealed .quiz-option-button:not(.is-revealed-correct):not(.is-selected) .option-prefix {
+  background-color: var(--light-color);
+  color: var(--text-muted-color);
+  opacity: 0.7;
+}
+
+
+/* Feedback icon (can be used in PracticePage, TestPage review, AILearnPage pq) */
+/* This might be less needed if option itself is styled with prefix */
+.feedback-icon {
+  margin-left: var(--spacing-unit);
+  font-weight: bold;
+}
+.feedback-icon.icon-correct { color: var(--success-color); }
+.feedback-icon.icon-incorrect { color: var(--danger-color); }
+
+
+/* === Review Mode Area Specifics (can still use the generic button styles above) === */
+/* Responsive adjustments for quiz layout */
+@media (min-width: 769px) { /* Apply side-by-side layout for larger screens */
+  .quiz-question-area {
+    flex-direction: row; /* Question stem and options side-by-side */
+    gap: var(--spacing-unit) * 3; /* 24px gap */
+  }
+  .question-stem-container {
+    flex: 1 1 55%; /* Question takes more space */
+    font-size: 1.15rem; /* Slightly larger font on desktop */
+  }
+  .quiz-options-container {
+    flex: 1 1 40%; /* Options take less space */
+  }
+}
+
+
 /* === Unified Quiz/Review Option Button Styles === */
 /* Base style for an option button when it's part of a quiz/review interface */
 /* This can be on .options-list .option-button or a more specific container */
