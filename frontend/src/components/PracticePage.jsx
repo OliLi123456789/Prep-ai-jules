@@ -1,40 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { InlineMath, BlockMath } from 'react-katex';
-import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
-import Confetti from 'react-confetti';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import QuizPlayer from './QuizPlayer'; // Import the new component
 import './PracticePage.css';
 
 const PracticePage = () => {
-  const navigate = useNavigate(); // Already here
-  const location = useLocation(); // Get location object
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedSubtopic, setSelectedSubtopic] = useState('');
   const [numQuestions, setNumQuestions] = useState(0);
-
-  const [questions, setQuestions] = useState([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [showSelections, setShowSelections] = useState(true);
+  const [pageTitleOverride, setPageTitleOverride] = useState(null);
+  const [quizKey, setQuizKey] = useState(0); // Used to force re-mount of QuizPlayer
 
-  // New state for practice session
-  const [userAnswers, setUserAnswers] = useState({}); // Stores { qIndex: { selected: 'option', correct: true/false } }
-  const [currentScore, setCurrentScore] = useState(0);
-  const [sessionStartTime, setSessionStartTime] = useState(null);
-  const [timeElapsed, setTimeElapsed] = useState(0);
-  const [showResults, setShowResults] = useState(false);
-  
-  // New state for Review Mode
-  const [isReviewMode, setIsReviewMode] = useState(false);
-  const [reviewQuestionIndex, setReviewQuestionIndex] = useState(0);
-
-  // For displaying a title if navigated with state
-  const [pageTitleOverride, setPageTitleOverride] = useState(null); 
-
-  const timerIntervalRef = useRef(null);
-
-  // Placeholder data
+  // Placeholder data for topic selections
   const topics = {
     Math: ['Algebra', 'Geometry', 'Trigonometry', 'Statistics'],
     Reading: ['Main Idea', 'Inference', 'Vocabulary in Context', 'Purpose'],
@@ -43,8 +23,8 @@ const PracticePage = () => {
 
   const handleTopicChange = (event) => {
     setSelectedTopic(event.target.value);
-    setSelectedSubtopic(''); // Reset subtopic when topic changes
-    setNumQuestions(0); // Reset questions
+    setSelectedSubtopic('');
+    setNumQuestions(0);
   };
 
   const handleSubtopicChange = (event) => {
@@ -55,27 +35,13 @@ const PracticePage = () => {
     setNumQuestions(num);
   };
 
-  // --- Timer Effect ---
-  useEffect(() => {
-    if (sessionStartTime && !showResults) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimeElapsed(Math.floor((Date.now() - sessionStartTime) / 1000));
-      }, 1000);
-    } else {
-      clearInterval(timerIntervalRef.current);
-    }
-    return () => clearInterval(timerIntervalRef.current);
-  }, [sessionStartTime, showResults]);
-
-  // Effect to handle auto-start from navigation state
+  // Effect to handle auto-start from navigation state (e.g., from Dashboard)
   useEffect(() => {
     if (location.state && location.state.topic && location.state.subTopic && location.state.numQuestions) {
       const { topic, subTopic, numQuestions: numQsFromState, description } = location.state;
       
-      // Check if this specific auto-start has already been processed
-      // This simple check might not be robust enough if user navigates back then forward again with same state
       if (sessionStorage.getItem('practicePageAutoStarted') === JSON.stringify(location.state)) {
-          return;
+        return;
       }
 
       console.log("PracticePage: Received state for auto-start:", location.state);
@@ -86,342 +52,67 @@ const PracticePage = () => {
         setPageTitleOverride(`Starting: ${description}`);
       }
       
-      // Call handleStartPractice, but it needs to be stable or wrapped if used in useEffect deps
-      // Or, ensure handleStartPractice uses up-to-date state values from its closure or via refs/callback
-      // For simplicity here, assuming handleStartPractice will pick up these new states.
-      // A more robust way is to pass them directly or trigger via a separate effect.
-      // To ensure it runs with the new state, let's use a short timeout or another effect.
-      
-      // Mark as processed and clear state
       sessionStorage.setItem('practicePageAutoStarted', JSON.stringify(location.state));
-      navigate(location.pathname, { replace: true, state: {} }); // Clear state
+      navigate(location.pathname, { replace: true, state: {} });
 
-      // Trigger practice start after state updates have likely propagated
-      // This is a common pattern: set states, then trigger action that uses them
-      // Need to ensure handleStartPractice is called *after* these states are truly set.
-      // A dedicated effect listening to these specific states might be more robust.
-      // For now, let's directly call it. If it doesn't work, we'll need that effect.
-      // handleStartPractice(); // This might use stale state if called immediately.
+      // Directly trigger start after states are set
+      setShowSelections(false);
+      setQuizKey(prevKey => prevKey + 1); // Change key to force QuizPlayer remount
       
-      // Let's try to trigger it via an effect that watches these specific states
     } else {
-        sessionStorage.removeItem('practicePageAutoStarted'); // Clear if no valid state
+      sessionStorage.removeItem('practicePageAutoStarted');
     }
   }, [location.state, navigate]);
 
-  // Effect to auto-start practice when selections are made (either manually or via navigation state)
-  // and not already in a session or showing results.
-  useEffect(() => {
-    // Only auto-start if selections are present (from nav state) AND we are in the selection view.
-    if (selectedTopic && selectedSubtopic && numQuestions > 0 && showSelections && location.state && location.state.topic) {
-        // The check 'location.state.topic' ensures this effect primarily runs for navigation-triggered auto-starts
-        // and not just any manual selection change *unless* it was the one that completed the form.
-        console.log("PracticePage: Auto-starting practice due to state change from navigation.");
-        handleStartPractice();
-        setPageTitleOverride(null); // Clear override after starting
-    }
-  }, [selectedTopic, selectedSubtopic, numQuestions, showSelections, location.state]);
 
-
-  const formatTime = (totalSeconds) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
-  };
-
-  // --- API Call & Practice Start ---
-  const handleStartPractice = async () => {
-    // ... (validation as before)
+  const handleStartPractice = () => {
     if (!selectedTopic || !selectedSubtopic || numQuestions === 0) {
       alert('Please select a topic, subtopic, and number of questions.');
       return;
     }
-    setIsLoading(true);
-    setError(null);
-    setQuestions([]);
-    setUserAnswers({});
-    setCurrentScore(0);
-    setShowResults(false);
+    setPageTitleOverride(null); // Clear any title from nav-based start
+    setShowSelections(false);
+    setQuizKey(prevKey => prevKey + 1); // Increment key to remount QuizPlayer
+  };
 
-    try {
-      const response = await fetch('/api/generate-questions', { /* ... (fetch options as before) */
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: selectedTopic, subTopic: selectedSubtopic, numQuestions: numQuestions,
-        }),
-      });
-      
-      const data = await response.json(); // Attempt to parse JSON first
-
-      if (!response.ok) {
-        // If response is not OK, data should contain the error object from backend
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
-      }
-
-      // Handle cases where response is OK, but data might indicate an issue (e.g. AI returned empty array)
-      // or if backend error structure was missed by !response.ok (less likely with current backend)
-      if (!data || (Array.isArray(data) && data.length === 0) || data.error) {
-        if (data && data.message) {
-             setError(data.message);
-        } else if (Array.isArray(data) && data.length === 0) {
-            setError('The AI generated no questions for this selection.');
-        } else {
-            setError('Received unexpected data structure from server.');
-        }
-        return; // Stop further processing
-      }
-      
-      // Success case: response is OK and data is a non-empty array of questions
-      setQuestions(data);
-      setCurrentQuestionIndex(0);
-      setShowSelections(false);
-      setSessionStartTime(Date.now()); // Start timer
-      setTimeElapsed(0);
-      // setError(null); // Ensure error is cleared on success
-    } catch (err) { 
-      // This catch block will now handle network errors, JSON parsing errors if response wasn't JSON,
-      // or the error thrown from (!response.ok) block.
-      setError(err.message || 'An unknown error occurred while fetching questions.');
-      console.error("Fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleQuizCompletion = (results) => {
+    console.log("PracticePage: QuizPlayer finished.", results);
+    // Could show a summary here, or offer to go back to selections
+    // For now, QuizPlayer handles its own results screen.
+    // To return to selection screen from PracticePage after QuizPlayer is done:
+    // setShowSelections(true); // This might be triggered by a button within QuizPlayer via a prop
   };
   
-  // --- Answer Selection ---
-  const handleOptionSelect = (option) => {
-    if (userAnswers[currentQuestionIndex]) return; // Already answered
-
-    const isCorrect = option === questions[currentQuestionIndex].correct_answer;
-    if (isCorrect) {
-      setCurrentScore(prevScore => prevScore + 1);
-    }
-    setUserAnswers(prevAnswers => ({
-      ...prevAnswers,
-      [currentQuestionIndex]: { selected: option, correct: isCorrect },
-    }));
-  };
-
-  // --- Navigation ---
-  const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-    } else { // Last question, trigger finish
-      setShowResults(true);
-      setSessionStartTime(null); // Stop timer by clearing start time
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prevIndex => prevIndex - 1);
-    }
-  };
-
-  // --- Reset/Stop ---
-  const resetPracticeState = () => {
+  // If user exits QuizPlayer (e.g. "Back to Dashboard" or a new "Exit Quiz" button)
+  // we might want to show selections again. This could be a prop function passed to QuizPlayer.
+  const handleExitQuizPlayer = () => {
     setShowSelections(true);
-    setShowResults(false);
-    setQuestions([]);
-    setUserAnswers({});
-    setCurrentScore(0);
-    setSessionStartTime(null);
-    setTimeElapsed(0);
-    setSelectedTopic('');
-    setSelectedSubtopic('');
-    setNumQuestions(0);
-    setError(null);
-    setCurrentQuestionIndex(0);
-    clearInterval(timerIntervalRef.current);
-  };
-
-  const handleStopPractice = () => { // Renamed from handleReturnToSelections for clarity
-    resetPracticeState();
-  };
-  
-  const handlePracticeAgain = () => {
-    resetPracticeState();
-  };
-
-  const handleBackToDashboard = () => {
-    resetPracticeState();
-    navigate('/dashboard');
-  };
-
-
-  // --- Render Logic ---
-  if (isLoading && showSelections) { // Show loading only if it's for initial module load from selections
-    return <div className="page-container practice-page-container"><p className="loading-message">{pageTitleOverride || "Loading setup..."}</p></div>;
-  }
-  // If loading questions *after* selections are hidden (i.e., practice started)
-  if (isLoading && !showSelections) {
-    return <div className="page-container practice-page-container"><p className="loading-message">Loading questions...</p></div>;
+    setPageTitleOverride(null);
+    // Reset selections if desired
+    // setSelectedTopic('');
+    // setSelectedSubtopic('');
+    // setNumQuestions(0);
   }
 
-  if (error) { 
+
+  if (!showSelections) {
+    const apiParams = {
+      topic: selectedTopic,
+      subTopic: selectedSubtopic,
+      numQuestions: numQuestions,
+      // testType: "PRACTICE" // Optional: could add a general type for logging or backend logic
+    };
     return (
-      <div className="page-container practice-page-container error-container">
-        <p className="error-message">Error: {error}</p>
-        <button onClick={handleStopPractice} className="button button-primary">Try Again</button>
-      </div>
-    );
-  }
-
-  if (showResults) {
-    const percentage = questions.length > 0 ? Math.round((currentScore / questions.length) * 100) : 0;
-    return (
-      <div className="page-container practice-page-container results-screen">
-        <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />
-        <h1 className="page-title">Practice Complete!</h1> {/* pageTitleOverride not used here */}
-        <p className="results-score">You got {currentScore} out of {questions.length} correct ({percentage}%)</p>
-        <p className="results-time">Total time: {formatTime(timeElapsed)}</p>
-        <div className="results-actions">
-          <button onClick={() => { setIsReviewMode(true); setReviewQuestionIndex(0); }} className="button button-info">Review Answers</button>
-          <button onClick={handlePracticeAgain} className="button button-primary">Practice Again</button>
-          <button onClick={handleBackToDashboard} className="button button-secondary">Back to Dashboard</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isReviewMode && questions.length > 0) {
-    const reviewQ = questions[reviewQuestionIndex];
-    const userAnswerForReview = userAnswers[reviewQuestionIndex];
-
-    return (
-      <div className="page-container practice-page-container review-mode-area card">
-        <h2 className="card-title">Reviewing Question {reviewQuestionIndex + 1} of {questions.length}</h2>
-        <div className="question-text">
-          <p>{reviewQ.question_text}</p>
-          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'latex' && (
-            <div className="visual-asset latex-asset"><BlockMath math={reviewQ.visual_assets.data} /></div>
-          )}
-          {reviewQ.visual_assets && reviewQ.visual_assets.type === 'svg' && (
-            <div className="visual-asset svg-asset" dangerouslySetInnerHTML={{ __html: reviewQ.visual_assets.data }} />
-          )}
-        </div>
-        <div className="options-list review-options">
-          {reviewQ.options.map((option, index) => {
-            let buttonClass = 'button option-button disabled-option'; // Base for review
-            const isCorrectAnswer = option === reviewQ.correct_answer;
-            const isUserSelectedAnswer = userAnswerForReview && option === userAnswerForReview.selected;
-
-            if (isCorrectAnswer) buttonClass += ' review-correct-answer';
-            if (isUserSelectedAnswer) {
-              buttonClass += userAnswerForReview.correct ? ' review-user-correct' : ' review-user-incorrect';
-            }
-            return (
-              <button key={index} className={buttonClass} disabled>
-                {option}
-                {isCorrectAnswer && <span className="feedback-icon"> ✔ Correct</span>}
-                {isUserSelectedAnswer && !userAnswerForReview.correct && isCorrectAnswer && <span className="feedback-icon"> (Your pick was different)</span>}
-                {isUserSelectedAnswer && !userAnswerForReview.correct && !isCorrectAnswer && <span className="feedback-icon"> ✗ Your pick</span>}
-                {isUserSelectedAnswer && userAnswerForReview.correct && <span className="feedback-icon"> ✓ Your pick</span>}
-
-              </button>
-            );
-          })}
-        </div>
-        <div className="explanation-area review-explanation">
-          <h4>Explanation:</h4>
-          <p>{reviewQ.explanation}</p>
-        </div>
-        <div className="navigation-buttons">
-          <button 
-            onClick={() => setReviewQuestionIndex(i => i - 1)} 
-            disabled={reviewQuestionIndex === 0}
-            className="button button-secondary"
-          >
-            Previous
-          </button>
-          <button 
-            onClick={() => setReviewQuestionIndex(i => i + 1)} 
-            disabled={reviewQuestionIndex === questions.length - 1}
-            className="button button-primary"
-          >
-            Next
-          </button>
-        </div>
-        <button onClick={() => setIsReviewMode(false)} className="button button-info button-block">Exit Review</button>
-      </div>
-    );
-  }
-  
-  if (!showSelections && questions.length > 0) {
-    const currentQuestion = questions[currentQuestionIndex];
-    const attemptedAnswer = userAnswers[currentQuestionIndex];
-
-    return (
-      <div className="page-container practice-page-container question-display-area">
-        <div className="session-info card"> 
-            <p className="question-counter">Question {currentQuestionIndex + 1} of {questions.length}</p>
-            <p className="timer">Time: {formatTime(timeElapsed)}</p>
-        </div>
-        <p className="target-time-info">Target time per question: 1 min 30 secs (Static)</p>
-        
-        <div className="question-content card"> {/* Added card for question content */}
-          <div className="question-text">
-            <p>{currentQuestion.question_text}</p>
-            {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'latex' && (
-              <div className="visual-asset latex-asset">
-                <BlockMath math={currentQuestion.visual_assets.data} />
-              </div>
-            )}
-            {currentQuestion.visual_assets && currentQuestion.visual_assets.type === 'svg' && (
-              <div 
-                className="visual-asset svg-asset" 
-                dangerouslySetInnerHTML={{ __html: currentQuestion.visual_assets.data }} 
-              />
-            )}
-          </div>
-
-          <div className="options-list">
-            {currentQuestion.options.map((option, index) => {
-              let buttonClass = 'button option-button'; {/* Base classes */}
-              if (attemptedAnswer) {
-                if (option === attemptedAnswer.selected) {
-                  buttonClass += attemptedAnswer.correct ? ' selected correct' : ' selected incorrect';
-                } else if (option === currentQuestion.correct_answer) {
-                  buttonClass += ' correct-unselected'; // Show correct if user picked wrong
-                }
-              }
-              return (
-                <button 
-                  key={index} 
-                  className={buttonClass}
-                  onClick={() => handleOptionSelect(option)}
-                  disabled={!!attemptedAnswer}
-                >
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-
-          {attemptedAnswer && (
-            <div className="explanation-area">
-              <h4>Explanation:</h4>
-              <p>{currentQuestion.explanation}</p>
-            </div>
-          )}
-        </div> {/* End of question-content card */}
-
-
-        <div className="navigation-buttons">
-          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="button button-secondary">
-            Previous
-          </button>
-          {currentQuestionIndex === questions.length - 1 ? (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-success">Finish</button>
-          ) : (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-primary">Next</button>
-          )}
-        </div>
-        <button onClick={handleStopPractice} className="button button-danger button-block stop-practice-button">
-          Stop Practice
-        </button>
-      </div>
+      <QuizPlayer
+        key={quizKey} // Force re-mount when key changes
+        quizTitle={`Practice: ${selectedTopic} - ${selectedSubtopic}`}
+        apiParams={apiParams}
+        showImmediateFeedback={true}
+        confettiOnComplete={true}
+        onQuizComplete={handleQuizCompletion}
+        // onExit={handleExitQuizPlayer} // Example of a prop to return to selection
+        pageSpecificClassName="practice-page-container"
+      />
     );
   }
 
@@ -429,11 +120,11 @@ const PracticePage = () => {
   return (
     <div className="page-container practice-page-container">
       <h1 className="page-title">{pageTitleOverride || "Practice Zone"}</h1>
-      {showSelections && (
-      <div className="card"> {/* Wrap selection area in a card */}
+      {/* Removed loading state that was specific to internal question fetching */}
+      <div className="card">
         <div className="form-group">
-          <label htmlFor="topic-select">Choose a Topic:</label> {/* This label might need specific styling if it's part of a complex layout */}
-          <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} disabled={!showSelections} className="form-control">
+          <label htmlFor="topic-select">Choose a Topic:</label>
+          <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} className="form-control">
             <option value="">-- Select Topic --</option>
             {Object.keys(topics).map(topic => (
               <option key={topic} value={topic}>{topic}</option>
@@ -444,7 +135,7 @@ const PracticePage = () => {
         {selectedTopic && (
           <div className="form-group">
             <label htmlFor="subtopic-select">Choose a Subtopic:</label>
-            <select id="subtopic-select" value={selectedSubtopic} onChange={handleSubtopicChange} disabled={!selectedTopic || !showSelections} className="form-control">
+            <select id="subtopic-select" value={selectedSubtopic} onChange={handleSubtopicChange} className="form-control">
               <option value="">-- Select Subtopic --</option>
               {topics[selectedTopic]?.map(subtopic => (
                 <option key={subtopic} value={subtopic}>{subtopic}</option>
@@ -455,30 +146,29 @@ const PracticePage = () => {
 
         {selectedSubtopic && (
           <div className="form-group">
-              <label>Number of Questions:</label>
-              <div className="question-buttons">
-                  {[5, 10, 15].map(num => (
-                      <button 
-                          key={num}
-                          onClick={() => handleNumQuestionsClick(num)}
-                          className={`button button-outline-primary ${numQuestions === num ? 'active' : ''}`}
-                          disabled={!showSelections}
-                      >
-                          {num} Questions
-                      </button>
-                  ))}
-              </div>
+            <label>Number of Questions:</label>
+            <div className="question-buttons">
+              {[5, 10, 15].map(num => (
+                <button
+                  key={num}
+                  onClick={() => handleNumQuestionsClick(num)}
+                  className={`button button-outline-primary ${numQuestions === num ? 'active' : ''}`}
+                >
+                  {num} Questions
+                </button>
+              ))}
+            </div>
           </div>
         )}
         
-        <button 
-          className="button button-success button-block" 
+        <button
+          className="button button-success button-block"
           onClick={handleStartPractice}
-          disabled={!selectedTopic || !selectedSubtopic || numQuestions === 0 || !showSelections}
+          disabled={!selectedTopic || !selectedSubtopic || numQuestions === 0}
         >
           Start Practice
         </button>
-      </div> {/* End of card for selection */}
+      </div>
     </div>
   );
 };

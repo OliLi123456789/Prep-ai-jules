@@ -1,0 +1,20 @@
+/* QuizPlayer.css */
+/* Styles specific to the QuizPlayer component's own layout, if any. */
+/* Most quiz-related styling (options, feedback) should come from App.css. */
+
+/* Example: If QuizPlayer had a specific wrapper not covered by page-container */
+/*
+.quiz-player-wrapper {
+  padding: var(--spacing-unit);
+  background-color: var(--light-color);
+}
+*/
+
+/* The default pageSpecificClassName is "quiz-player-page-container" */
+/* If this default is used, styles for it can go here, or it can rely on global .page-container */
+.quiz-player-page-container {
+  /* Inherits from .page-container from App.css */
+  /* Add overrides or specific QuizPlayer container styles here if needed. */
+  /* For example, if it needs a different max-width by default: */
+  /* max-width: 800px; */
+}

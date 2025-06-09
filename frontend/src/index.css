@@ -14,22 +14,14 @@ code {
     monospace;
 }
 
+/* .App styling might be handled by App.css or component-specific styles */
+/* Ensure this .App class is still relevant or remove if not. */
 .App {
-  text-align: center;
+  text-align: center; /* This is a very generic style, verify its necessity */
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 20vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-  padding: 20px;
-}
+/* Removed .App-header as it's likely unused and superseded by components/Header.css */
 
-h1 {
+h1 { /* Global h1 styling, consider if this should be more specific or part of a reset/normalize.css */
   margin-bottom: 0.5em;
 }

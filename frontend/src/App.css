@@ -376,50 +376,90 @@ body { /* Already in index.css, but good to keep in mind for global theme */
   }
 }
 
-/* === Review Mode Styles (Common for Practice & Test Review) === */
-.review-mode-area.card { /* The main container for review, styled as a card */
-  margin-top: var(--spacing-unit) * 2;
+/* === Unified Quiz/Review Option Button Styles === */
+/* Base style for an option button when it's part of a quiz/review interface */
+/* This can be on .options-list .option-button or a more specific container */
+.quiz-option-button { /* Use this class on buttons in PracticePage, TestPage, AILearnPage (for pq) */
+  text-align: left;
+  background-color: var(--light-color);
+  border-color: var(--border-color);
+  color: var(--text-color);
+  font-weight: normal; /* Override .button bold if needed */
+  display: block; /* Make them stack nicely */
+  width: 100%;
 }
-.review-mode-area .card-title { /* Title like "Reviewing Question X of Y" */
-  /* Uses global .card-title, specific overrides if needed */
-  text-align: center; /* Center review title */
-}
-
-.review-options .option-button.disabled-option {
-  opacity: 1; /* Ensure they are fully visible, not dimmed by global disabled style */
-  cursor: default; /* Not clickable */
-  /* Base styling from .button .option-button is applied */
-}
-
-.review-options .option-button.review-correct-answer {
-  border-color: var(--success-color);
-  background-color: #e6ffed; /* Very light green */
-}
-.review-options .option-button.review-user-incorrect {
-  border-color: var(--danger-color);
-  background-color: #ffeeee; /* Very light red */
-  box-shadow: 0 0 0 2px var(--danger-color) inset; /* Inner shadow for user's wrong pick */
-}
-.review-options .option-button.review-user-correct {
-  border-color: var(--success-color);
-  background-color: #e6ffed; /* Light green, same as correct-answer */
-  box-shadow: 0 0 0 2px var(--success-color) inset; /* Inner shadow for user's correct pick */
+.quiz-option-button:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
 }
 
-.review-options .feedback-icon {
+/* State: User has selected this option (before answer is revealed) */
+.quiz-option-button.is-selected-pending {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+  font-weight: bold; /* Make selected option text bold */
+}
+
+/* State: This option is revealed as the correct answer */
+.quiz-option-button.is-revealed-correct {
+  background-color: #d1e7dd; /* alert-success bg */
+  border-color: #badbcc;   /* alert-success border */
+  color: #0f5132;        /* alert-success text */
+}
+
+/* State: User selected this, and it's the correct answer */
+.quiz-option-button.is-selected.is-revealed-correct {
+  border-color: var(--success-color); /* Stronger success border */
+  /* Optional: Add inset shadow like review mode if desired for user's correct pick */
+  box-shadow: 0 0 0 2px var(--success-color) inset;
+}
+
+/* State: This option is revealed as an incorrect answer (typically when user selected it) */
+.quiz-option-button.is-revealed-incorrect {
+  background-color: #f8d7da; /* alert-danger bg */
+  border-color: #f5c2c7;   /* alert-danger border */
+  color: #842029;        /* alert-danger text */
+}
+
+/* State: User selected this, and it's an incorrect answer */
+.quiz-option-button.is-selected.is-revealed-incorrect {
+  border-color: var(--danger-color); /* Stronger danger border */
+  box-shadow: 0 0 0 2px var(--danger-color) inset;
+}
+
+/* Styles for options in a review mode or when answers are all revealed and disabled */
+.quiz-options-container.is-review-mode .quiz-option-button,
+.quiz-options-container.answers-revealed .quiz-option-button {
+  opacity: 1 !important; /* Ensure full visibility */
+  cursor: default !important; /* Not clickable */
+}
+/* By default, non-selected, non-correct options in review should just be neutral */
+.quiz-options-container.is-review-mode .quiz-option-button:not(.is-revealed-correct):not(.is-selected),
+.quiz-options-container.answers-revealed .quiz-option-button:not(.is-revealed-correct):not(.is-selected) {
+  background-color: var(--light-color);
+  border-color: var(--border-color);
+  color: var(--text-muted-color); /* Dim unselected, non-correct answers slightly */
+  opacity: 0.8;
+}
+
+
+/* Feedback icon (can be used in PracticePage, TestPage review, AILearnPage pq) */
+.feedback-icon {
   margin-left: var(--spacing-unit);
   font-weight: bold;
 }
-.review-options .review-correct-answer .feedback-icon {
-  color: var(--success-color);
-}
-.review-options .review-user-incorrect .feedback-icon {
-  color: var(--danger-color);
-}
-.review-options .review-user-correct .feedback-icon {
-  color: var(--success-color);
-}
+.feedback-icon.icon-correct { color: var(--success-color); }
+.feedback-icon.icon-incorrect { color: var(--danger-color); }
 
+
+/* === Review Mode Area Specifics (can still use the generic button styles above) === */
+.review-mode-area.card {
+  margin-top: var(--spacing-unit) * 2;
+}
+.review-mode-area .card-title {
+  text-align: center;
+}
+/* .review-options container can now be .quiz-options-container.is-review-mode */
 
 .review-explanation { /* Specific class for explanation in review mode */
   margin-top: var(--spacing-unit) * 2;
@@ -431,7 +471,7 @@ body { /* Already in index.css, but good to keep in mind for global theme */
 .review-explanation h4 {
   margin-top: 0;
   margin-bottom: var(--spacing-unit);
-  color: var(--primary-color); /* Or a neutral dark color */
+  color: var(--primary-color);
   font-size: 1.1rem;
 }
 .review-explanation p {

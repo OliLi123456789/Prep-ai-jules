@@ -66,50 +66,7 @@
   margin-bottom: var(--spacing-unit) * 2; /* 16px */
 }
 
-/* Specific styling for option buttons beyond base .button */
-.option-button { /* This is a .button, so these are overrides/additions */
-  text-align: left;
-  background-color: var(--light-color);
-  border-color: var(--border-color);
-  color: var(--text-color);
-  font-weight: normal; /* Override .button bold if needed */
-  padding: calc(var(--spacing-unit) * 1) calc(var(--spacing-unit) * 1.25); /* 8px 10px */
-  font-size: 1.05rem; 
-}
-.option-button:hover:not(:disabled) {
-  background-color: #e9ecef;
-  border-color: #adb5bd;
-  color: var(--text-color);
-}
-
-/* Feedback states for option buttons - these are highly specific */
-.option-button.selected {
-  border-width: 2px; 
-  font-weight: bold; 
-}
-.option-button.correct, 
-.option-button.correct-unselected {
-  background-color: #d1e7dd; /* alert-success bg */
-  border-color: #badbcc;   /* alert-success border */
-  color: #0f5132;        /* alert-success text */
-}
-.option-button.selected.correct {
-  border-color: #0f5132; 
-}
-.option-button.incorrect {
-  background-color: #f8d7da; /* alert-danger bg */
-  border-color: #f5c2c7;   /* alert-danger border */
-  color: #842029;        /* alert-danger text */
-}
-.option-button.selected.incorrect {
-   border-color: #842029; 
-}
-.option-button:disabled:not(.selected):not(.correct-unselected) { 
-  background-color: var(--light-color); 
-  border-color: var(--border-color);
-  color: var(--text-muted-color);
-  opacity: 0.7;
-}
+/* Option Button styles and Feedback states are now handled by global .quiz-option-button states in App.css */
 
 .navigation-buttons {
   display: flex;

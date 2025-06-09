@@ -19,15 +19,11 @@ const getAIQuestions = async (params) => {
   
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
-    console.error("DeepSeek API key (DEEPSEEK_API_KEY) is not configured on the server.");
-    // For development, return hardcoded questions if API key is missing
-    // return { error: true, message: "DeepSeek API key is not configured on the server. Please set DEEPSEEK_API_KEY environment variable." };
-    console.log("DEEPSEEK_API_KEY not found. Using hardcoded questions for development as fallback.");
-    const fallbackQuestions = [
-        { question_id: "fallback_q1", question_text: "Fallback: Solve 2x+3=7", options: ["x=1", "x=2", "x=3", "x=4"], correct_answer: "x=2", explanation: "2x = 4, so x = 2" },
-        { question_id: "fallback_q2", question_text: "Fallback: What is the capital of France?", options: ["Berlin", "Madrid", "Paris", "Rome"], correct_answer: "Paris", explanation: "Paris is the capital of France." }
-    ];
-    return fallbackQuestions.slice(0, params.numQuestions || fallbackQuestions.length);
+    console.error("DeepSeek API key (DEEPSEEK_API_KEY) is not configured on the server. Cannot generate questions.");
+    return {
+      error: true,
+      message: "DeepSeek API key (DEEPSEEK_API_KEY) is not configured on the server. Cannot generate questions."
+    };
   }
 
   const apiUrl = 'https://api.deepseek.com/chat/completions';
@@ -116,6 +112,88 @@ app.post('/api/generate-questions', async (req, res) => { // Make endpoint async
     res.status(404).json({ error: true, message: 'AI generated no questions for the given criteria.' });
   } else { // Should be caught by result.error, but as a fallback
     res.status(500).json({ error: true, message: 'An unexpected issue occurred while generating questions.' });
+  }
+});
+
+// --- Analytics Endpoint ---
+app.get('/api/analytics', async (req, res) => {
+  try {
+    const userDataString = await fs.readFile(mockDataPath, 'utf8');
+    const userData = JSON.parse(userDataString);
+    const { practiceHistory = [], pastScores = [] } = userData;
+
+    // 1. practiceSessionsCompleted
+    const practiceSessionsCompleted = practiceHistory.filter(item => item.type === 'practice').length;
+
+    // 2. testsTaken
+    const testsTaken = pastScores.filter(item => item.type && item.type.toLowerCase().includes('full')).length;
+
+    // 3. overallPracticeAverageScore
+    const practiceItems = practiceHistory.filter(item => item.type === 'practice' && typeof item.scorePercent === 'number');
+    const overallPracticeAverageScore = practiceItems.length > 0
+      ? practiceItems.reduce((sum, item) => sum + item.scorePercent, 0) / practiceItems.length
+      : 0;
+
+    // 4. averageScoresByTopic
+    const topicData = {};
+    practiceItems.forEach(item => {
+      if (!topicData[item.topic]) {
+        topicData[item.topic] = { totalScore: 0, count: 0 };
+      }
+      topicData[item.topic].totalScore += item.scorePercent;
+      topicData[item.topic].count += 1;
+    });
+    const averageScoresByTopic = Object.keys(topicData).map(topic => ({
+      topic: topic,
+      averageScore: topicData[topic].count > 0 ? topicData[topic].totalScore / topicData[topic].count : 0,
+      sessions: topicData[topic].count,
+    }));
+
+    // 5. strongestTopic & 6. topicForImprovement
+    let strongestTopic = null;
+    let topicForImprovement = null;
+    if (averageScoresByTopic.length > 0) {
+      averageScoresByTopic.sort((a, b) => b.averageScore - a.averageScore); // Sort descending by score
+      strongestTopic = averageScoresByTopic[0].topic;
+      topicForImprovement = averageScoresByTopic[averageScoresByTopic.length - 1].topic;
+    }
+
+    // 7. performanceOverTime for practice sessions
+    const performanceOverTime = practiceItems
+      .filter(item => item.date && typeof item.scorePercent === 'number')
+      .map(item => ({
+        date: item.date, // Assuming date is already in 'YYYY-MM-DD' or desired string format
+        score: item.scorePercent,
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
+
+    // 8. pastTestScoresSummary for full tests
+    const pastTestScoresSummary = pastScores
+      .filter(item => item.type && item.type.toLowerCase().includes('full') && item.date && typeof item.overall === 'number')
+      .map(item => ({
+        date: item.date,
+        type: item.type,
+        overall: item.overall,
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
+
+    res.json({
+      practiceSessionsCompleted,
+      testsTaken,
+      overallPracticeAverageScore,
+      averageScoresByTopic,
+      strongestTopic,
+      topicForImprovement,
+      performanceOverTime,
+      pastTestScoresSummary,
+    });
+
+  } catch (error) {
+    console.error("Error generating analytics:", error);
+    if (error.code === 'ENOENT' && error.path === mockDataPath) {
+        return res.status(404).json({ error: true, message: "User data file not found." });
+    }
+    res.status(500).json({ error: true, message: "Failed to generate analytics.", details: error.message });
   }
 });
 
