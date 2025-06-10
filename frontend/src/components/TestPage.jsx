@@ -39,50 +39,43 @@ const TestPage = () => {
   if (!showTestTypeSelection && selectedTestId) {
     const testConfig = getTestConfigById(selectedTestId);
     if (!testConfig) {
-      // Should not happen if selection is from the list, but as a fallback
       return <p className="error-message">Error: Selected test configuration not found.</p>;
     }
 
-    // For this subtask, if it's a full test, we launch QuizPlayer with the first section's config.
-    // QuizPlayer will be enhanced later (Step 7) to manage the multi-section sequence.
     let sectionConfigToLaunch = testConfig;
     if (testConfig.isFullTest && testConfig.sections && testConfig.sections.length > 0) {
-      sectionConfigToLaunch = testConfig.sections[0]; // Launch first section
+      sectionConfigToLaunch = testConfig.sections[0];
       console.log(`Starting full test "${testConfig.name}" with first section: "${sectionConfigToLaunch.name}"`);
     } else if (testConfig.isSingleSectionTest) {
-      // For single section tests that might be adaptive (like SAT Math Section Sample)
-      // The sectionConfigToLaunch is the testConfig itself, which has adaptive props.
       console.log(`Starting single section test: "${testConfig.name}"`);
     }
 
-    let apiParamsForQuiz = { ...sectionConfigToLaunch.apiParams };
-    let numQuestionsForQuiz = sectionConfigToLaunch.numQuestions;
+    const baseApiParamsForQuiz = { ...sectionConfigToLaunch.apiParams };
+    let quizPlayerProps = {
+      key: quizKey,
+      quizTitle: testConfig.name,
+      showImmediateFeedback: false, // Always false for tests
+      confettiOnComplete: false,
+      onQuizComplete: handleQuizCompletion,
+      pageSpecificClassName: "test-page-container",
+      baseApiParams: baseApiParamsForQuiz,
+    };
 
-    if (sectionConfigToLaunch.isAdaptive) {
-      apiParamsForQuiz.module = 1; // Always start with module 1
-      apiParamsForQuiz.totalQuestionsInModule = sectionConfigToLaunch.questionsPerModule.module1;
-      numQuestionsForQuiz = sectionConfigToLaunch.questionsPerModule.module1; // Full first module
-      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    if (sectionConfigToLaunch.isAdaptive && sectionConfigToLaunch.apiParams?.testType === "SAT") {
+      quizPlayerProps.isAdaptiveSat = true;
+      quizPlayerProps.satSectionType = sectionConfigToLaunch.satSectionType;
+      quizPlayerProps.questionsPerModule = sectionConfigToLaunch.questionsPerModule;
+      // QuizPlayer's useEffect will construct specific apiParams for Module 1 using baseApiParams
     } else {
-      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+      quizPlayerProps.isAdaptiveSat = false;
+      // For non-adaptive tests, ensure numQuestions is in baseApiParams
+      if (!baseApiParamsForQuiz.numQuestions && sectionConfigToLaunch.numQuestions) {
+        baseApiParamsForQuiz.numQuestions = sectionConfigToLaunch.numQuestions;
+      }
+      quizPlayerProps.apiParams = baseApiParamsForQuiz; // Pass apiParams directly for non-adaptive
     }
 
-    return (
-      <QuizPlayer
-        key={quizKey}
-        quizTitle={testConfig.name} // Use the main test name as title
-        apiParams={apiParamsForQuiz}
-        showImmediateFeedback={false} // Tests always have feedback deferred
-        confettiOnComplete={false} // Usually no confetti for formal tests
-        onQuizComplete={handleQuizCompletion}
-        // onExit={handleExitQuizPlayer}
-        pageSpecificClassName="test-page-container"
-        // SAT adaptive props (will be used by QuizPlayer if testType is SAT and isAdaptive is true)
-        isSatAdaptiveModule1={sectionConfigToLaunch.isAdaptive && sectionConfigToLaunch.apiParams?.testType === "SAT"}
-        satSectionType={sectionConfigToLaunch.satSectionType || null}
-        questionsPerModule={sectionConfigToLaunch.questionsPerModule || null}
-      />
-    );
+    return <QuizPlayer {...quizPlayerProps} />;
   }
 
   return (

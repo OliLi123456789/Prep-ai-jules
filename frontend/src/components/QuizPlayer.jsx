@@ -265,11 +265,12 @@ const QuizPlayer = ({
         setShowResults(true);
         if (onQuizComplete) {
           onQuizComplete({
-            module1PerformanceBand: module1PerformanceBand, // From M1
+            isAdaptiveSatSession: true, // Add this flag
+            module1PerformanceBand: module1PerformanceBand,
             module1Score: module1ScoreForDisplay,
+            totalQuestionsM1: questionsPerModule.module1,
             module2Score: resultsM2.score,
-            totalQuestionsModule1: questionsPerModule.module1,
-            totalQuestionsModule2: questionsPerModule.module2,
+            totalQuestionsM2: questionsPerModule.module2,
             timeElapsed: timeElapsed,
           });
         }
@@ -277,19 +278,21 @@ const QuizPlayer = ({
       }
     }
 
+    // Standard quiz progression or moving to next question in current module
     if (nextQIndex < questions.length) {
       setCurrentQuestionIndex(nextQIndex);
-    } else { // End of non-adaptive quiz or unexpected state
+    } else { // End of a non-adaptive quiz, or an unexpected end
       setSessionStartTime(null);
-      const finalResults = calculatePerformance();
+      const finalResults = calculatePerformance(); // Should be for the current set of questions
       setCurrentScore(finalResults.score);
       setShowResults(true);
       if (onQuizComplete) {
         onQuizComplete({
+          isAdaptiveSatSession: false, // Explicitly false for non-adaptive
           score: finalResults.score,
           totalQuestions: finalResults.totalQuestions,
           timeElapsed: timeElapsed,
-          performanceBand: finalResults.performanceBand, // Might be null if not SAT M1
+          performanceBand: finalResults.performanceBand, // Will be null if not SAT M1
         });
       }
     }

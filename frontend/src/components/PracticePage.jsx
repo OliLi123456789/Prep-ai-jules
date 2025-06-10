@@ -92,11 +92,36 @@ const PracticePage = () => {
   };
 
   const handleQuizCompletion = (results) => {
-    console.log("PracticePage: QuizPlayer finished.", results);
-    // TODO: Potentially show a modal or message here before resetting to selections.
-    // For now, upon completion, QuizPlayer shows its own results, and user can navigate back.
-    // If we want PracticePage to take over after QuizPlayer's own results screen:
-    // setShowSelections(true); // This would bring user back to selection screen.
+    console.log("PracticePage: QuizPlayer finished. Raw results object:", results);
+
+    // Helper to format time, assuming results.timeElapsed is in seconds
+    const formatTimeDisplay = (totalSeconds) => {
+        if (totalSeconds === null || typeof totalSeconds === 'undefined') return 'N/A';
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
+    };
+
+    if (results.isAdaptiveSatSession) { // Check for the new flag from QuizPlayer
+      console.log("--- Adaptive SAT Practice Results ---");
+      console.log("  Module 1 Performance Band:", results.module1PerformanceBand);
+      console.log("  Module 1 Score:", results.module1Score, "/", results.totalQuestionsModule1);
+      console.log("  Module 2 Score:", results.module2Score, "/", results.totalQuestionsModule2);
+
+      const totalCorrect = (results.module1Score || 0) + (results.module2Score || 0);
+      const totalPossible = (results.totalQuestionsModule1 || 0) + (results.totalQuestionsModule2 || 0);
+      if (totalPossible > 0) {
+        console.log("  Overall Score:", totalCorrect, "/", totalPossible, `(${(totalCorrect / totalPossible * 100).toFixed(1)}%)`);
+      }
+    } else {
+      console.log("--- Standard Practice Results ---");
+      console.log("  Score:", results.score, "/", results.totalQuestions);
+    }
+    console.log("  Time Elapsed:", formatTimeDisplay(results.timeElapsed));
+
+    // Optionally, bring user back to selection screen after a delay or button click
+    // For now, QuizPlayer handles its own results screen. This log is for verification.
+    // setTimeout(() => setShowSelections(true), 5000); // Example: return to selections after 5s
   };
   
   // const handleExitQuizPlayer = () => { // If QuizPlayer had an "Exit" button
@@ -108,38 +133,37 @@ const PracticePage = () => {
   // }
 
   if (!showSelections && selectedPracticeConfig) {
-    let apiParamsForQuiz = { ...selectedPracticeConfig.apiParams };
-    let numQuestionsForQuiz = selectedPracticeConfig.numQuestions;
+    // Determine base API params from the selected config
+    const baseApiParamsForQuiz = { ...selectedPracticeConfig.apiParams };
+    let quizPlayerProps = {
+      key: quizKey,
+      quizTitle: selectedPracticeConfig.title,
+      showImmediateFeedback: !selectedPracticeConfig.isAdaptive, // Immediate feedback OFF for adaptive, ON otherwise
+      confettiOnComplete: true,
+      onQuizComplete: handleQuizCompletion,
+      pageSpecificClassName: "practice-page-container",
+      baseApiParams: baseApiParamsForQuiz, // Pass the base params
+    };
 
-    if (selectedPracticeConfig.isAdaptive) {
-      // For the first module of an adaptive SAT section
-      apiParamsForQuiz.module = 1;
-      apiParamsForQuiz.totalQuestionsInModule = selectedPracticeConfig.questionsPerModule.module1;
-      // For practice, we might want to let user pick number of questions for the first module, up to total.
-      // Or just use the configured number for the module. For simplicity, using configured number.
-      numQuestionsForQuiz = selectedPracticeConfig.questionsPerModule.module1;
-      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    if (selectedPracticeConfig.isAdaptive && selectedPracticeConfig.apiParams?.testType === "SAT") {
+      // SAT Adaptive Mode specific props
+      quizPlayerProps.isAdaptiveSat = true;
+      quizPlayerProps.satSectionType = selectedPracticeConfig.satSectionType;
+      quizPlayerProps.questionsPerModule = selectedPracticeConfig.questionsPerModule;
+      // QuizPlayer's useEffect will construct the specific apiParams for Module 1 using baseApiParams
+      // No need to pass numQuestions directly in apiParams here as QuizPlayer handles it for adaptive
     } else {
-      // For non-adaptive, numQuestions is already in apiParams or from selectedPracticeConfig.numQuestions
-      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+      // Non-Adaptive or other types of practice
+      quizPlayerProps.isAdaptiveSat = false;
+      // For non-adaptive, QuizPlayer's useEffect will use baseApiParams and expect numQuestions within it or from a default.
+      // Ensure numQuestions from config is part of baseApiParams if not already.
+      if (!baseApiParamsForQuiz.numQuestions && selectedPracticeConfig.numQuestions) {
+        baseApiParamsForQuiz.numQuestions = selectedPracticeConfig.numQuestions;
+      }
+       quizPlayerProps.apiParams = baseApiParamsForQuiz; // For non-adaptive, pass apiParams directly
     }
 
-    return (
-      <QuizPlayer
-        key={quizKey}
-        quizTitle={selectedPracticeConfig.title}
-        apiParams={apiParamsForQuiz}
-        showImmediateFeedback={true} // Practice mode usually has immediate feedback
-        confettiOnComplete={true}
-        onQuizComplete={handleQuizCompletion}
-        // onExit={handleExitQuizPlayer}
-        pageSpecificClassName="practice-page-container"
-        // Props for SAT adaptivity (will be used by QuizPlayer if apiParams.testType is SAT and isAdaptive is true)
-        isSatAdaptiveModule1={selectedPracticeConfig.isAdaptive && selectedPracticeConfig.apiParams?.testType === "SAT"} // Pass if it's module 1
-        satSectionType={selectedPracticeConfig.satSectionType || null} // e.g. "Math" or "Reading & Writing"
-        questionsPerModule={selectedPracticeConfig.questionsPerModule || null}
-      />
-    );
+    return <QuizPlayer {...quizPlayerProps} />;
   }
 
   const availableCategories = selectedPracticeTestType ? Object.keys(practiceSections[selectedPracticeTestType].categories) : [];
@@ -171,9 +195,15 @@ const PracticePage = () => {
             </select>
           </div>
         )}
-        
+
         {/* Number of questions selection could be re-added here for "General" practice types if desired */}
         {/* For now, numQuestions is derived from config */}
+
+        {selectedPracticeConfig && selectedPracticeConfig.isAdaptive && selectedPracticeConfig.apiParams?.testType === "SAT" && (
+          <p className="adaptive-session-note">
+            Note: This will be a two-module adaptive practice session. Your performance on Module 1 will determine the difficulty of Module 2.
+          </p>
+        )}
 
         <button
           className="button button-success button-block"

@@ -39,3 +39,16 @@
   }
   /* Any other specific responsive overrides for PracticePage's own elements */
 }
+
+.adaptive-session-note {
+  font-size: 0.875rem; /* 14px */
+  font-style: italic;
+  color: var(--text-muted-color);
+  margin-top: var(--spacing-unit); /* 8px */
+  margin-bottom: var(--spacing-unit) * 2; /* 16px, more space before button */
+  text-align: left;
+  padding: var(--spacing-unit); /* 8px */
+  background-color: var(--light-color);
+  border: 1px dashed var(--border-color); /* Use dashed to be less prominent than card border */
+  border-radius: var(--border-radius-base); /* Use base radius */
+}
