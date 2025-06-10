@@ -13,9 +13,18 @@ const QuizPlayer = ({
   onQuizComplete = (results) => console.log("Quiz Complete:", results),
   confettiOnComplete = true,
   pageSpecificClassName = "quiz-player-page-container", // Generic default
-  isStandaloneQuestion = false, // New prop for single question display mode
-  initialQuestion = null, // New prop for the question to display
-  showOptionPrefixes = true, // Whether to show A, B, C, D
+  isStandaloneQuestion = false,
+  initialQuestion = null,
+  showOptionPrefixes = true,
+  // isSatAdaptiveModule1 prop is removed, QuizPlayer now manages SAT adaptive flow internally via isAdaptiveSat
+  onAnswerSelect = null,
+
+  // New props for SAT adaptive mode:
+  isAdaptiveSat = false, // If true, enables SAT adaptive mode
+  satSectionType = null, // E.g., "Math", "ReadingAndWriting" - for context
+  questionsPerModule = null, // E.g., { module1: 22, module2: 22 }
+  baseApiParams = {}, // Base params (testType, topic, subTopic) from parent for fetching questions
+
   // navigateToOnExit = "/dashboard"
 }) => {
   const navigate = useNavigate();
@@ -23,6 +32,7 @@ const QuizPlayer = ({
   // Initialize questions state based on mode
   const [questions, setQuestions] = useState(isStandaloneQuestion && initialQuestion ? [initialQuestion] : []);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // Always 0 for standalone
+  // userAnswers stores { [qIndex]: { selectedOption: "Option A", correct?: true/false } }
   const [userAnswers, setUserAnswers] = useState({});
   const [currentScore, setCurrentScore] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState(null);
@@ -34,29 +44,84 @@ const QuizPlayer = ({
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [reviewQuestionIndex, setReviewQuestionIndex] = useState(0);
 
+  // Internal SAT Adaptive State
+  const [currentSatInternalModule, setCurrentSatInternalModule] = useState(1);
+  const [module1PerformanceBand, setModule1PerformanceBand] = useState(null);
+  const [questionsAnsweredInCurrentModule, setQuestionsAnsweredInCurrentModule] = useState(0);
+  const [isTransitioningModules, setIsTransitioningModules] = useState(false);
+  const [module1ScoreForDisplay, setModule1ScoreForDisplay] = useState(null); // To store M1 score for results screen
+
   const timerIntervalRef = useRef(null);
 
-  useEffect(() => {
-    if (!isStandaloneQuestion) {
-      // Start the quiz as soon as the component mounts with valid apiParams
-      handleStartQuiz();
-    } else if (initialQuestion) {
-      // For standalone, if initialQuestion is provided, set it up
-      setQuestions([initialQuestion]);
-      setCurrentQuestionIndex(0);
-      // Potentially set userAnswers if initialQuestion includes selection/correctness info for display
-      if (initialQuestion.selectedOption && initialQuestion.isCorrect !== undefined) {
-         setUserAnswers({ 0: { selected: initialQuestion.selectedOption, correct: initialQuestion.isCorrect } });
-      } else if (initialQuestion.correct_answer && initialQuestion.options?.includes(initialQuestion.correct_answer)) {
-        // If we want to show the correct answer by default in standalone display mode
-        // setUserAnswers({ 0: { selected: initialQuestion.correct_answer, correct: true } });
+  // Centralized function to fetch questions
+  const fetchQuestionsForModule = async (moduleParams) => {
+    setIsLoading(true);
+    setError(null);
+    // setQuestions([]); // Clear questions immediately before fetch if preferred
+
+    try {
+      const response = await fetch(questionApiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(moduleParams),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+      if (data.error || !Array.isArray(data) || data.length === 0) {
+        setError(data.message || data.error || 'AI generated no questions for this module.');
+        setQuestions([]); // Ensure questions are empty on error
+        return;
       }
-      setIsLoading(false); // Not loading from API in this mode
+      setQuestions(data);
+      if (!isStandaloneQuestion && (!isAdaptiveSat || currentSatInternalModule === 1)) { // Start timer only for M1 or non-adaptive
+        setSessionStartTime(Date.now());
+      }
+    } catch (err) {
+      setError(err.message || 'An unknown error occurred while fetching questions.');
+      console.error("QuizPlayer fetch error:", err);
+      setQuestions([]);
+    } finally {
+      setIsLoading(false);
     }
-  }, [apiParams, isStandaloneQuestion, initialQuestion]);
+  };
 
   useEffect(() => {
-    if (sessionStartTime && !showResults && !isStandaloneQuestion) { // Timer only for full quiz mode
+    if (isStandaloneQuestion && initialQuestion) {
+      setQuestions([initialQuestion]);
+      setCurrentQuestionIndex(0);
+      setIsLoading(false);
+      if (initialQuestion.selectedOption && initialQuestion.isCorrect !== undefined) {
+        setUserAnswers({ 0: { selectedOption: initialQuestion.selectedOption, correct: initialQuestion.isCorrect } });
+      }
+    } else if (!isStandaloneQuestion) {
+      // Initial setup for a quiz session (adaptive or non-adaptive)
+      setCurrentSatInternalModule(1);
+      setModule1PerformanceBand(null);
+      setQuestionsAnsweredInCurrentModule(0);
+      setIsTransitioningModules(false);
+      setUserAnswers({});
+      setCurrentScore(0); // Reset score for the current module being started/restarted
+      setTimeElapsed(0); // Reset timer
+      setShowResults(false);
+      setIsReviewMode(false);
+
+      let initialApiParams;
+      if (isAdaptiveSat) {
+        initialApiParams = {
+          ...baseApiParams, // from props, e.g. { testType: "SAT", topic: "Math" }
+          module: 1,
+          numQuestions: questionsPerModule.module1,
+          totalQuestionsInModule: questionsPerModule.module1,
+        };
+      } else {
+        initialApiParams = { ...baseApiParams, numQuestions: apiParams.numQuestions }; // Use original apiParams for non-adaptive
+      }
+      fetchQuestionsForModule(initialApiParams);
+    }
+  }, [apiParams, isStandaloneQuestion, initialQuestion, quizTitle, isAdaptiveSat]); // quizTitle change might signify new quiz instance
+
+  useEffect(() => {
+    if (sessionStartTime && !showResults && !isStandaloneQuestion && !isTransitioningModules) {
       timerIntervalRef.current = setInterval(() => {
         setTimeElapsed(Math.floor((Date.now() - sessionStartTime) / 1000));
       }, 1000);
@@ -72,81 +137,159 @@ const QuizPlayer = ({
     return `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
   };
 
-  const handleStartQuiz = async () => {
-    if (isStandaloneQuestion) return; // Don't fetch if displaying a single question
+  // This replaces handleStartQuiz for initial load, now handled by useEffect.
+  // This function is now only for starting module 2.
+  const startModule2 = async () => {
+    if (!isAdaptiveSat || currentSatInternalModule !== 2 || !module1PerformanceBand) return;
 
-    if (!apiParams || apiParams.numQuestions <= 0) {
-      setError("Invalid quiz parameters provided.");
-      setIsLoading(false); // Ensure loading is stopped
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    setQuestions([]);
-    setUserAnswers({});
-    setCurrentScore(0);
-    setShowResults(false);
-    setIsReviewMode(false);
+    setIsTransitioningModules(false);
     setCurrentQuestionIndex(0);
-    setTimeElapsed(0);
+    setUserAnswers({}); // Reset answers for Module 2
+    setCurrentScore(0);   // Reset score for Module 2
+    // Timer for M2 can be handled by resetting sessionStartTime or a new M2-specific timer state if needed.
+    // For simplicity, let's assume timer continues or resets based on sessionStartTime logic.
+    // setSessionStartTime(Date.now()); // If timer should reset for M2
 
-    try {
-      const response = await fetch(questionApiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiParams),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || `HTTP error! Status: ${response.status}`);
-      if (!data || (Array.isArray(data) && data.length === 0) || data.error) {
-        setError(data.message || 'AI generated no questions for this selection.');
-        return;
-      }
-      setQuestions(data);
-      setSessionStartTime(Date.now());
-    } catch (err) {
-      setError(err.message || 'An unknown error occurred while fetching questions.');
-      console.error("QuizPlayer fetch error:", err);
-    } finally {
-      setIsLoading(false);
-    }
+    const paramsForModule2 = {
+      ...baseApiParams, // from props
+      module: 2,
+      module1Performance: module1PerformanceBand,
+      numQuestions: questionsPerModule.module2,
+      totalQuestionsInModule: questionsPerModule.module2,
+    };
+    fetchQuestionsForModule(paramsForModule2);
   };
 
   const handleOptionSelect = (option) => {
-    if (isStandaloneQuestion) return; // No interaction in standalone display mode
-
     const currentQuestion = questions[currentQuestionIndex];
-    // Allow re-selection only if immediate feedback is not shown (test mode before submission)
-    // For this version, if an answer exists for the current question, don't allow change.
-    if (userAnswers[currentQuestionIndex]) return;
+    const questionId = currentQuestion.question_id || currentQuestionIndex; // Prefer question_id, fallback to index
 
-    const isCorrect = option === currentQuestion.correct_answer;
-
-    let newScore = currentScore;
-    if (isCorrect && (!userAnswers[currentQuestionIndex] || !userAnswers[currentQuestionIndex].isCorrect)) { // only add score if not previously answered correctly
-        newScore +=1;
-    } else if (!isCorrect && userAnswers[currentQuestionIndex]?.isCorrect) { // if changing from correct to incorrect
-        newScore -=1;
+    if (isStandaloneQuestion) {
+      // In standalone mode, primarily used by AITutorPage for guided practice.
+      // Allow selection, store it locally for visual feedback, and notify parent.
+      // No scoring or immediate feedback logic within QuizPlayer for this mode.
+      setUserAnswers(prevAnswers => ({
+        ...prevAnswers,
+        [currentQuestionIndex]: { selectedOption: option },
+      }));
+      if (onAnswerSelect) {
+        onAnswerSelect(option, questionId);
+      }
+      return;
     }
-    setCurrentScore(newScore);
 
-    setUserAnswers(prevAnswers => ({
-      ...prevAnswers,
-      [currentQuestionIndex]: { selected: option, correct: isCorrect },
-    }));
+    // Full Quiz Mode Logic:
+    if (showImmediateFeedback) {
+      // If immediate feedback is shown, don't allow changing answer once made
+      // (if correct status is already set, it means it was answered)
+      if (userAnswers[currentQuestionIndex]?.correct !== undefined) {
+         return;
+      }
+      const isCorrect = option === currentQuestion.correct_answer;
+      let newScore = currentScore;
+      if (isCorrect) {
+        newScore += 1;
+      }
+      setCurrentScore(newScore);
+      setUserAnswers(prevAnswers => ({
+        ...prevAnswers,
+        [currentQuestionIndex]: { selectedOption: option, correct: isCorrect },
+      }));
+      if (onAnswerSelect) { // Also notify parent in full quiz mode if callback provided
+        onAnswerSelect(option, questionId);
+      }
+    } else {
+      // Test mode (showImmediateFeedback is false): allow changing selection
+      // Score is not updated here. It will be calculated at the end of the quiz.
+      setUserAnswers(prevAnswers => ({
+        ...prevAnswers,
+        [currentQuestionIndex]: { selectedOption: option }, // Only store selected option
+      }));
+      if (onAnswerSelect) {
+        onAnswerSelect(option, questionId);
+      }
+    }
+  };
+
+  const calculatePerformance = () => {
+    let correctCount = 0;
+    const totalQuestions = questions.length;
+
+    for (let i = 0; i < totalQuestions; i++) {
+      const question = questions[i];
+      const answer = userAnswers[i];
+      if (answer && answer.selectedOption === question.correct_answer) {
+        correctCount++;
+      }
+    }
+
+    const score = correctCount;
+    let performanceBand = null;
+
+    // Calculate performance band ONLY if it's SAT Module 1
+    if (isAdaptiveSat && currentSatInternalModule === 1) {
+      const percentage = totalQuestions > 0 ? (score / totalQuestions) : 0;
+      if (percentage < 0.4) {
+        performanceBand = "low";
+      } else if (percentage <= 0.7) {
+        performanceBand = "medium";
+      } else {
+        performanceBand = "high";
+      }
+    }
+    return { score, totalQuestions, performanceBand };
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-    } else {
-      setSessionStartTime(null); // Stop timer
+    if (isStandaloneQuestion) return;
+
+    setQuestionsAnsweredInCurrentModule(prev => prev + 1);
+    const nextQIndex = currentQuestionIndex + 1;
+
+    if (isAdaptiveSat) {
+      if (currentSatInternalModule === 1 && (questionsAnsweredInCurrentModule + 1) >= questionsPerModule.module1) {
+        const resultsM1 = calculatePerformance(); // Score for Module 1
+        setModule1PerformanceBand(resultsM1.performanceBand);
+        setModule1ScoreForDisplay(resultsM1.score); // Store M1 score for display
+        setCurrentSatInternalModule(2);
+        setQuestionsAnsweredInCurrentModule(0); // Reset for M2
+        setCurrentQuestionIndex(0); // Reset for M2
+        setUserAnswers({}); // Clear answers for M2
+        setIsTransitioningModules(true);
+        // Don't fetch next question yet; user clicks "Proceed to Module 2"
+        return;
+      }
+      if (currentSatInternalModule === 2 && (questionsAnsweredInCurrentModule + 1) >= questionsPerModule.module2) {
+        const resultsM2 = calculatePerformance(); // Score for Module 2
+        setCurrentScore(resultsM2.score); // This is M2 score
+        setShowResults(true);
+        if (onQuizComplete) {
+          onQuizComplete({
+            module1PerformanceBand: module1PerformanceBand, // From M1
+            module1Score: module1ScoreForDisplay,
+            module2Score: resultsM2.score,
+            totalQuestionsModule1: questionsPerModule.module1,
+            totalQuestionsModule2: questionsPerModule.module2,
+            timeElapsed: timeElapsed,
+          });
+        }
+        return;
+      }
+    }
+
+    if (nextQIndex < questions.length) {
+      setCurrentQuestionIndex(nextQIndex);
+    } else { // End of non-adaptive quiz or unexpected state
+      setSessionStartTime(null);
+      const finalResults = calculatePerformance();
+      setCurrentScore(finalResults.score);
       setShowResults(true);
       if (onQuizComplete) {
         onQuizComplete({
-          score: currentScore,
-          totalQuestions: questions.length,
-          timeElapsed: timeElapsed // final timeElapsed value
+          score: finalResults.score,
+          totalQuestions: finalResults.totalQuestions,
+          timeElapsed: timeElapsed,
+          performanceBand: finalResults.performanceBand, // Might be null if not SAT M1
         });
       }
     }
@@ -163,10 +306,10 @@ const QuizPlayer = ({
   // For now, QuizPlayer auto-starts. Parent can unmount/remount to restart.
 
   // --- Render Logic ---
-  if (isLoading && !isStandaloneQuestion) { // Only show full page loader for actual quiz loading
+  if (isLoading && !isStandaloneQuestion && !isTransitioningModules) {
     return <div className={`page-container ${pageSpecificClassName}`}><p className="loading-message">Loading quiz...</p></div>;
   }
-  if (error && !isStandaloneQuestion) { // Only show full page error for actual quiz loading errors
+  if (error && !isStandaloneQuestion && !isTransitioningModules) {
     return (
       <div className={`page-container ${pageSpecificClassName} error-container`}>
         <p className="error-message">Error: {error}</p>
@@ -175,17 +318,56 @@ const QuizPlayer = ({
     );
   }
 
+  if (isTransitioningModules && isAdaptiveSat) {
+    return (
+      <div className={`page-container ${pageSpecificClassName} transition-screen`}>
+        <h2 className="card-title">Module 1 Complete</h2>
+        <p>Your performance in Module 1: <strong>{module1PerformanceBand?.toUpperCase()}</strong></p>
+        <p>The difficulty of Module 2 will be adjusted based on this performance.</p>
+        <button onClick={startModule2} className="button button-primary button-lg">
+          Proceed to Module 2
+        </button>
+      </div>
+    );
+  }
+
   if (showResults && !isStandaloneQuestion) {
-    const percentage = questions.length > 0 ? Math.round((currentScore / questions.length) * 100) : 0;
+    let scoreForDisplay = currentScore; // This is M2 score if adaptive, or total if not
+    let totalQuestionsForDisplay = questions.length; // M2 length if adaptive, or total if not
+    let resultMessage = `You got ${scoreForDisplay} out of ${totalQuestionsForDisplay} correct`;
+
+    if(isAdaptiveSat && module1ScoreForDisplay !== null) {
+      const overallCorrect = module1ScoreForDisplay + scoreForDisplay;
+      const overallTotal = questionsPerModule.module1 + questionsPerModule.module2;
+      const overallPercentage = overallTotal > 0 ? Math.round((overallCorrect / overallTotal) * 100) : 0;
+      resultMessage = `Module 1: ${module1ScoreForDisplay}/${questionsPerModule.module1} (Performance: ${module1PerformanceBand?.toUpperCase()}).
+                       Module 2: ${scoreForDisplay}/${questionsPerModule.module2}.
+                       Overall: ${overallCorrect}/${overallTotal} (${overallPercentage}%)`;
+    } else if (questions.length > 0) {
+        const percentage = Math.round((scoreForDisplay / totalQuestionsForDisplay) * 100);
+        resultMessage += ` (${percentage}%)`;
+    }
+
     return (
       <div className={`page-container ${pageSpecificClassName} results-screen`}>
         {confettiOnComplete && <Confetti recycle={false} numberOfPieces={300} width={window.innerWidth} height={window.innerHeight} />}
         <h1 className="page-title">{quizTitle} Complete!</h1>
-        <p className="results-score">You got {currentScore} out of {questions.length} correct ({percentage}%)</p>
+        <p className="results-score" style={{whiteSpace: 'pre-line'}}>{resultMessage}</p>
         <p className="results-time">Total time: {formatTime(timeElapsed)}</p>
         <div className="results-actions">
+          {/* Review mode needs to be adapted for two modules if isAdaptiveSat */}
           {questions.length > 0 && (
-            <button onClick={() => { setIsReviewMode(true); setReviewQuestionIndex(0); }} className="button button-info">Review Answers</button>
+            <button
+              onClick={() => {
+                setIsReviewMode(true);
+                // For now, review mode shows current 'questions' (i.e. Module 2 if adaptive)
+                // A more complex review would allow switching between M1 and M2 questions.
+                setReviewQuestionIndex(0);
+              }}
+              className="button button-info"
+            >
+              Review Answers {isAdaptiveSat ? "(Module 2)" : ""}
+            </button>
           )}
           <button onClick={() => navigate("/dashboard")} className="button button-secondary">Back to Dashboard</button>
         </div>
@@ -195,8 +377,7 @@ const QuizPlayer = ({
 
   if (isReviewMode && !isStandaloneQuestion && questions.length > 0) {
     const reviewQ = questions[reviewQuestionIndex];
-    const userAnswerForReview = userAnswers[reviewQuestionIndex];
-    // Determine option prefix for review mode
+    const userAnswerForReview = userAnswers[reviewQuestionIndex]; // Now { selectedOption, correct? }
     const reviewOptionPrefix = (idx) => showOptionPrefixes ? String.fromCharCode(65 + idx) + "." : "";
 
     return (
@@ -212,23 +393,25 @@ const QuizPlayer = ({
               <div className="visual-asset svg-asset" dangerouslySetInnerHTML={{ __html: reviewQ.visual_assets.data }} />
             )}
           </div>
-          <div className="quiz-options-container is-review-mode">
+          <div className="quiz-options-container is-review-mode answers-revealed"> {/* Ensure answers-revealed for review */}
             {reviewQ.options.map((option, idx) => {
               const isActualCorrect = option === reviewQ.correct_answer;
-              const isSelectedByPlayer = userAnswerForReview && option === userAnswerForReview.selected;
-              const wasPlayerCorrectIfSelected = isSelectedByPlayer && userAnswerForReview.correct;
+              // userAnswerForReview.correct might not exist if showImmediateFeedback was false during quiz
+              // For review, we need to determine correctness now if not already stored.
+              const isSelectedByPlayer = userAnswerForReview && option === userAnswerForReview.selectedOption;
+              const playerWasCorrect = isSelectedByPlayer && (userAnswerForReview.correct !== undefined ? userAnswerForReview.correct : isActualCorrect);
 
               let buttonClass = 'button quiz-option-button';
               if (isActualCorrect) buttonClass += ' is-revealed-correct';
               if (isSelectedByPlayer) {
                 buttonClass += ' is-selected';
-                if (!wasPlayerCorrectIfSelected) buttonClass += ' is-revealed-incorrect';
+                if (!playerWasCorrect) buttonClass += ' is-revealed-incorrect';
+                // If playerWasCorrect, is-revealed-correct already handles the visual
               }
               return (
                 <button key={option} className={buttonClass} disabled>
                   {showOptionPrefixes && <span className="option-prefix">{reviewOptionPrefix(idx)}</span>}
                   <span className="option-text">{option}</span>
-                  {/* Feedback icons can be part of the text or separate elements if needed */}
                 </button>
               );
             })}
@@ -256,18 +439,19 @@ const QuizPlayer = ({
 
   // Logic for both full quiz mode and standalone question display
   const currentQuestion = questions[currentQuestionIndex];
-  const attemptedAnswer = userAnswers[currentQuestionIndex];
+  const currentAttempt = userAnswers[currentQuestionIndex]; // currentAttempt is { selectedOption, correct? }
   const optionPrefix = (idx) => showOptionPrefixes ? String.fromCharCode(65 + idx) + "." : "";
 
-
-  // Standalone question display mode adjustments
   let optionsContainerClasses = "quiz-options-container";
   if (isStandaloneQuestion) {
-    optionsContainerClasses += " is-review-mode answers-revealed"; // Treat as if answers are revealed, disable interaction
-  } else if (showImmediateFeedback && attemptedAnswer) {
+    // For standalone, we might want to show it as if it's in review mode, or just plain.
+    // If initialQuestion contains selectedOption and correct answer, it can be styled.
+    // For now, let's assume it's for display, potentially highlighting a correct answer if provided.
+    optionsContainerClasses += " is-review-mode answers-revealed";
+  } else if (showImmediateFeedback && currentAttempt) {
     optionsContainerClasses += " answers-revealed";
   }
-
+  // No special class for showImmediateFeedback=false before attempt, options are just default.
 
   return (
     <div className={`page-container ${pageSpecificClassName} ${isStandaloneQuestion ? 'standalone-question-view' : 'quiz-mode-view'}`}>
@@ -295,36 +479,41 @@ const QuizPlayer = ({
             const isActualCorrect = option === currentQuestion.correct_answer;
 
             if (isStandaloneQuestion) {
-                // For standalone, highlight correct if provided, and selected if provided
-                if (initialQuestion?.correct_answer === option) buttonClass += ' is-revealed-correct';
-                if (initialQuestion?.selectedOption === option) {
-                    buttonClass += ' is-selected';
-                    if (initialQuestion?.isCorrect === false) buttonClass += ' is-revealed-incorrect';
-                    // if true, is-revealed-correct already handles it
-                }
-            } else if (attemptedAnswer) { // Full quiz mode with an attempt
-              const isSelectedByPlayer = option === attemptedAnswer.selected;
-              if (showImmediateFeedback) {
-                if (isSelectedByPlayer) {
-                  buttonClass += ' is-selected';
-                  buttonClass += attemptedAnswer.correct ? ' is-revealed-correct' : ' is-revealed-incorrect';
-                } else if (isActualCorrect) {
-                  buttonClass += ' is-revealed-correct'; // Show correct answer if user was wrong
-                }
-              } else { // Test mode - no immediate feedback, only show selection
-                if (isSelectedByPlayer) buttonClass += ' is-selected-pending';
+              // If initialQuestion has info on what was selected or what is correct, use it
+              const initialAttempt = userAnswers[0] || {}; // Standalone always uses index 0
+              if (initialAttempt.selectedOption === option) {
+                buttonClass += ' is-selected';
+                if (initialAttempt.correct === true) buttonClass += ' is-revealed-correct';
+                else if (initialAttempt.correct === false) buttonClass += ' is-revealed-incorrect';
+              } else if (isActualCorrect && (initialQuestion.showCorrect || initialAttempt.selectedOption)) {
+                // Show correct if specified, or if user made a selection (implying answers revealed)
+                 buttonClass += ' is-revealed-correct';
               }
+            } else { // Full quiz interactive mode
+              if (currentAttempt) { // An answer has been made for this question
+                const isSelectedByPlayer = option === currentAttempt.selectedOption;
+                if (showImmediateFeedback) {
+                  if (isSelectedByPlayer) {
+                    buttonClass += ' is-selected';
+                    buttonClass += currentAttempt.correct ? ' is-revealed-correct' : ' is-revealed-incorrect';
+                  } else if (isActualCorrect) {
+                    buttonClass += ' is-revealed-correct';
+                  }
+                } else { // Test mode (showImmediateFeedback is false)
+                  if (isSelectedByPlayer) {
+                    buttonClass += ' is-selected-pending'; // Neutral selection indicator
+                  }
+                }
+              }
+              // No 'else' needed here: if no attempt, buttons are default styled.
             }
-            // No 'else if (!attemptedAnswer && userAnswers[currentQuestionIndex]?.selected === option)'
-            // because that state is covered by `is-selected-pending` if `!showImmediateFeedback`
-            // or by immediate feedback if `showImmediateFeedback`
 
             return (
               <button
                 key={option}
                 className={buttonClass}
                 onClick={() => handleOptionSelect(option)}
-                disabled={isStandaloneQuestion || (showImmediateFeedback && !!attemptedAnswer)}
+                disabled={isStandaloneQuestion || (showImmediateFeedback && !!currentAttempt)}
               >
                 {showOptionPrefixes && <span className="option-prefix">{optionPrefix(idx)}</span>}
                 <span className="option-text">{option}</span>
@@ -334,7 +523,7 @@ const QuizPlayer = ({
         </div>
       </div>
 
-      {showImmediateFeedback && attemptedAnswer && !isStandaloneQuestion && (
+      {showImmediateFeedback && currentAttempt && !isStandaloneQuestion && (
         <div className="explanation-area">
           <h4>Explanation:</h4>
           <p>{currentQuestion.explanation}</p>
@@ -343,15 +532,14 @@ const QuizPlayer = ({
 
       {!isStandaloneQuestion && (
         <div className="navigation-buttons">
-          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="button button-secondary">Previous</button>
+          <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0 || !!userAnswers[currentQuestionIndex-1] && !showImmediateFeedback} className="button button-secondary">Previous</button>
           {currentQuestionIndex === questions.length - 1 ? (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-success">Finish</button>
+            <button onClick={handleNextQuestion} disabled={!currentAttempt} className="button button-success">Finish</button>
           ) : (
-            <button onClick={handleNextQuestion} disabled={!attemptedAnswer} className="button button-primary">Next</button>
+            <button onClick={handleNextQuestion} disabled={!currentAttempt} className="button button-primary">Next</button>
           )}
         </div>
       )}
-      {/* Stop Quiz button could be added by parent or here if needed */}
     </div>
   );
 };

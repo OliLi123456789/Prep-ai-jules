@@ -1,89 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // useLocation might not be needed here unless for nav-based auto-start
-import QuizPlayer from './QuizPlayer'; // Import the new component
+import { useNavigate } from 'react-router-dom'; // useLocation removed as not used
+import QuizPlayer from './QuizPlayer';
+import { testConfigurations, getTestConfigById } from '../constants/practiceTestConfigs'; // Import new config
 import './TestPage.css';
 
 const TestPage = () => {
   const navigate = useNavigate();
-  // const location = useLocation(); // Currently not used for auto-start in TestPage
 
-  const [selectedTestType, setSelectedTestType] = useState('');
+  const [selectedTestId, setSelectedTestId] = useState(''); // Store the ID of the selected test
   const [showTestTypeSelection, setShowTestTypeSelection] = useState(true);
-  const [quizKey, setQuizKey] = useState(0); // Used to force re-mount of QuizPlayer
-
-  // Placeholder data for test types
-  const testTypes = [
-    "SAT Full Test (Sample)", 
-    "ACT Full Test (Sample)", 
-    "SAT Math Section (Sample)",
-    // Add more structured test types if backend can handle them
-    // e.g., { id: "sat_full", name: "SAT Full Test (Sample)", numQuestions: 154, topic: "Mixed", subTopic: "Mixed" }
-  ];
-  const MOCK_NUM_QUESTIONS_FOR_ANY_TEST = 3; // All sample tests will have 3 questions for now
+  const [quizKey, setQuizKey] = useState(0);
 
   const handleTestTypeChange = (event) => {
-    setSelectedTestType(event.target.value);
+    setSelectedTestId(event.target.value);
   };
 
   const handleStartTest = () => {
-    if (!selectedTestType) {
-      alert('Please select a test type.');
+    if (!selectedTestId) {
+      alert('Please select a test.');
       return;
     }
     setShowTestTypeSelection(false);
-    setQuizKey(prevKey => prevKey + 1); // Increment key to remount QuizPlayer
+    setQuizKey(prevKey => prevKey + 1);
   };
 
   const handleQuizCompletion = (results) => {
     console.log("TestPage: QuizPlayer finished.", results);
-    // TestPage specific logic after QuizPlayer is done (e.g. save results differently)
-    // QuizPlayer already handles its own results screen.
+    // Potentially navigate to a more detailed results page or show summary here
+    // For now, QuizPlayer handles its own results screen. To return to selection:
+    // setShowTestTypeSelection(true);
   };
 
   // const handleExitQuizPlayer = () => {
   //   setShowTestTypeSelection(true);
+  //   setSelectedTestId('');
   // }
 
-  if (!showTestTypeSelection) {
-    // Determine apiParams based on selectedTestType
-    // This is a simplified example; in a real app, test structures would be more detailed
-    const apiParams = {
-      topic: "Mixed", // Placeholder, as test type implies content
-      subTopic: selectedTestType, // Pass the selected test type string as subTopic for now
-      numQuestions: MOCK_NUM_QUESTIONS_FOR_ANY_TEST,
-      testType: selectedTestType // This is the main identifier for the backend
-    };
+  if (!showTestTypeSelection && selectedTestId) {
+    const testConfig = getTestConfigById(selectedTestId);
+    if (!testConfig) {
+      // Should not happen if selection is from the list, but as a fallback
+      return <p className="error-message">Error: Selected test configuration not found.</p>;
+    }
+
+    // For this subtask, if it's a full test, we launch QuizPlayer with the first section's config.
+    // QuizPlayer will be enhanced later (Step 7) to manage the multi-section sequence.
+    let sectionConfigToLaunch = testConfig;
+    if (testConfig.isFullTest && testConfig.sections && testConfig.sections.length > 0) {
+      sectionConfigToLaunch = testConfig.sections[0]; // Launch first section
+      console.log(`Starting full test "${testConfig.name}" with first section: "${sectionConfigToLaunch.name}"`);
+    } else if (testConfig.isSingleSectionTest) {
+      // For single section tests that might be adaptive (like SAT Math Section Sample)
+      // The sectionConfigToLaunch is the testConfig itself, which has adaptive props.
+      console.log(`Starting single section test: "${testConfig.name}"`);
+    }
+
+    let apiParamsForQuiz = { ...sectionConfigToLaunch.apiParams };
+    let numQuestionsForQuiz = sectionConfigToLaunch.numQuestions;
+
+    if (sectionConfigToLaunch.isAdaptive) {
+      apiParamsForQuiz.module = 1; // Always start with module 1
+      apiParamsForQuiz.totalQuestionsInModule = sectionConfigToLaunch.questionsPerModule.module1;
+      numQuestionsForQuiz = sectionConfigToLaunch.questionsPerModule.module1; // Full first module
+      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    } else {
+      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    }
 
     return (
       <QuizPlayer
         key={quizKey}
-        quizTitle={`${selectedTestType}`}
-        apiParams={apiParams}
-        showImmediateFeedback={false} // Key difference for Test mode
-        confettiOnComplete={true} // Or false for a more serious test setting
+        quizTitle={testConfig.name} // Use the main test name as title
+        apiParams={apiParamsForQuiz}
+        showImmediateFeedback={false} // Tests always have feedback deferred
+        confettiOnComplete={false} // Usually no confetti for formal tests
         onQuizComplete={handleQuizCompletion}
         // onExit={handleExitQuizPlayer}
         pageSpecificClassName="test-page-container"
+        // SAT adaptive props (will be used by QuizPlayer if testType is SAT and isAdaptive is true)
+        isSatAdaptiveModule1={sectionConfigToLaunch.isAdaptive && sectionConfigToLaunch.apiParams?.testType === "SAT"}
+        satSectionType={sectionConfigToLaunch.satSectionType || null}
+        questionsPerModule={sectionConfigToLaunch.questionsPerModule || null}
       />
     );
   }
 
-  // Initial Test Type Selection view
   return (
     <div className="page-container test-page-container">
       <h1 className="page-title">Take a Test</h1>
       <div className="card">
         <div className="form-group">
-          <label htmlFor="test-type-select">Choose a Test Type:</label>
+          <label htmlFor="test-type-select">Choose a Test:</label>
           <select
             id="test-type-select"
-            value={selectedTestType}
+            value={selectedTestId}
             onChange={handleTestTypeChange}
             className="form-control"
           >
-            <option value="">-- Select Test Type --</option>
-            {testTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
+            <option value="">-- Select Test --</option>
+            {testConfigurations.map(test => (
+              <option key={test.id} value={test.id}>{test.name}</option>
             ))}
           </select>
         </div>
@@ -91,7 +107,7 @@ const TestPage = () => {
         <button
           className="button button-primary button-block"
           onClick={handleStartTest}
-          disabled={!selectedTestType}
+          disabled={!selectedTestId}
         >
           Start Test
         </button>

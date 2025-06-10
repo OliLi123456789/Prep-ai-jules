@@ -11,156 +11,31 @@
   /* margin: calc(var(--spacing-unit) * 2) auto 0; */
 }
 
+/* Styles for the selection UI elements if any remain specific to PracticePage */
+/* For example, if .question-buttons for selecting number of questions is re-introduced for "General" practice */
+/*
 .question-buttons {
   display: flex;
-  gap: var(--spacing-unit); /* 8px */
+  gap: var(--spacing-unit);
   margin-top: var(--spacing-unit);
 }
-
-/* Specific styling for active state of question number buttons */
 .question-buttons .button.button-outline-primary.active {
   background-color: var(--primary-color);
   color: white;
 }
+*/
 
-.question-display-area {
-  /* Styles for when questions are shown, if any beyond card structure */
-}
+/* Most other styles like .question-text, .options-list, .visual-asset, .explanation-area, .results-screen etc.
+   are now effectively handled by QuizPlayer.jsx and its associated global styles in App.css.
+   Only keep styles here that are unique to the PracticePage's container or its specific selection UI,
+   which is now primarily driven by dropdowns that use global .form-control styles.
+*/
 
-.question-counter {
-  text-align: right;
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.question-text {
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.6;
-}
-
-.question-text p {
-  margin-bottom: var(--spacing-unit) * 0.5; /* Space between question text and visual asset if any */
-}
-
-.visual-asset {
-  margin: var(--spacing-unit) * 1.5 0; /* 12px */
-  padding: var(--spacing-unit) * 1.5;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-base);
-  background-color: var(--light-color);
-  overflow-x: auto;
-}
-
-.latex-asset {
-  font-size: 1.2rem; 
-}
-
-.svg-asset svg {
-  max-width: 100%; 
-  height: auto;   
-  display: block;
-  margin: 0 auto; 
-}
-
-.options-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-unit); /* 8px */
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-}
-
-.navigation-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-}
-
-/* Specific styling for stop-practice-button if not fully covered by .button-danger */
-.stop-practice-button { 
-  /* .button .button-danger .button-block covers most of it */
-}
-
-/* Session Info Bar */
-.session-info.card { /* session-info is now a card */
-  flex-direction: row; /* Ensure items are side-by-side */
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-unit); /* 8px */
-  margin-bottom: var(--spacing-unit);
-}
-
-.timer, .question-counter { 
-  font-size: 0.95rem;
-  color: var(--text-color);
-  font-weight: bold;
-}
-
-.target-time-info {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted-color);
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-}
-
-/* Option Button Feedback States are now handled by global .quiz-option-button states in App.css */
-
-/* Explanation Area */
-.explanation-area {
-  margin-top: var(--spacing-unit) * 2; /* 16px */
-  padding: var(--spacing-unit) * 1.5; /* 12px */
-  background-color: #cff4fc; /* alert-info bg */
-  border: 1px solid #b6effb;   /* alert-info border */
-  border-radius: var(--border-radius-base);
-}
-.explanation-area h4 {
-  margin-top: 0;
-  margin-bottom: var(--spacing-unit); /* 8px */
-  color: #055160; /* alert-info text */
-  font-size: 1.1rem;
-}
-.explanation-area p {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: #055160; /* alert-info text */
-}
-
-/* Results Screen */
-.results-screen {
-  text-align: center;
-}
-.results-screen .page-title { /* Already global */
-  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
-}
-.results-score {
-  font-size: 1.5rem;
-  color: var(--text-color);
-  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
-}
-.results-time {
-  font-size: 1.1rem;
-  color: var(--text-muted-color);
-  margin-bottom: var(--spacing-unit) * 3; /* 24px */
-}
-.results-actions {
-  display: flex;
-  justify-content: center;
-  gap: var(--spacing-unit) * 1.5; /* 12px */
-}
-/* .results-actions .button styles are covered by global .button and variants */
-
-
-/* Responsive adjustments */
+/* Responsive adjustments specific to PracticePage's selection card, if needed */
 @media (max-width: 600px) {
-  .practice-page-container .card { /* Reduce padding in cards on small screens */
-    padding: var(--spacing-unit) * 1.5;
+  .practice-page-container .card { /* This targets the selection card */
+    /* Example: padding: var(--spacing-unit) * 1.5; */
+    /* This was here before, might still be relevant for the selection card only */
   }
-  .question-buttons {
-    flex-direction: column;
-  }
-  .session-info.card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  /* Any other specific responsive overrides for PracticePage's own elements */
 }

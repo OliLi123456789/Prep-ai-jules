@@ -9,113 +9,21 @@
 /* Styles for elements within the card (if any specific overrides are needed) */
 .test-page-container .card .form-group { /* Example of more specific selector if needed */
   /* margin-bottom: var(--spacing-unit) * 1.5; */ /* e.g. 12px if different from global form-group */
+  /* This rule is very specific and might be for the selection card. Keep if selection card needs this. */
 }
 
-.question-display-area {
-  /* Specific styles for when questions are shown, if any beyond card structure */
-}
+/*
+  Most styles related to question display, options, session info, results, etc.,
+  are now handled by QuizPlayer.jsx and global styles in App.css.
+  This file should only contain styles specific to the TestPage's own selection UI
+  or overall container adjustments not covered by global .page-container.
+*/
 
-.session-info.card { /* session-info is now a card */
-  flex-direction: row; /* Ensure items are side-by-side */
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-unit); /* 8px */
-  margin-bottom: var(--spacing-unit) * 1.5; /* 12px */
-}
-
-.timer, .question-counter {
-  font-size: 1rem; 
-  color: var(--text-color);
-  font-weight: bold;
-}
-
-.question-text { /* This is inside .question-content.card */
-  font-size: 1.15rem; 
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-  line-height: 1.6;
-}
-
-.question-text p {
-  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
-}
-
-.visual-asset {
-  margin: var(--spacing-unit) * 1.5 0; /* 12px */
-  padding: var(--spacing-unit) * 1.5;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-base);
-  background-color: var(--light-color);
-  overflow-x: auto;
-}
-
-.latex-asset {
-  font-size: 1.2rem;
-}
-
-.svg-asset svg {
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-}
-
-.options-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-unit); /* 8px */
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-}
-
-/* Option Button styles and Feedback states are now handled by global .quiz-option-button states in App.css */
-
-.navigation-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-unit) * 2; /* 16px */
-}
-
-/* Specific styling for stop-test-button if not fully covered by .button-danger */
-.stop-test-button { 
-  /* .button .button-danger .button-block covers most of it */
-}
-
-/* Results Screen */
-.results-screen { /* Contained within .page-container .test-page-container */
-  text-align: center;
-}
-/* .results-screen .page-title is global */
-.results-score {
-  font-size: 1.5rem;
-  color: var(--text-color);
-  margin-bottom: var(--spacing-unit) * 0.5; /* 4px */
-}
-.results-time {
-  font-size: 1.1rem;
-  color: var(--text-muted-color);
-  margin-bottom: var(--spacing-unit) * 3; /* 24px */
-}
-.results-actions {
-  display: flex;
-  flex-wrap: wrap; 
-  justify-content: center;
-  gap: var(--spacing-unit) * 1.5; /* 12px */
-}
-.results-actions .button { /* Global button styles apply */
-  min-width: 160px; 
-}
-
-
-/* Responsive adjustments */
+/* Responsive adjustments specific to TestPage's selection card, if needed */
 @media (max-width: 600px) {
-  .test-page-container .card {
-     padding: var(--spacing-unit) * 1.5;
+  .test-page-container .card { /* This targets the selection card */
+     /* Example: padding: var(--spacing-unit) * 1.5; */
+     /* This was here before, might still be relevant for the selection card only */
   }
-  .session-info.card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .option-button {
-    font-size: 1rem;
-    padding: var(--spacing-unit) * 0.75 var(--spacing-unit);
-  }
+  /* Any other specific responsive overrides for TestPage's own elements */
 }

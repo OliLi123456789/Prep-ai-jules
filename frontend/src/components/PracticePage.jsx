@@ -1,64 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import QuizPlayer from './QuizPlayer'; // Import the new component
+import QuizPlayer from './QuizPlayer';
+import { practiceSections } from '../constants/practiceTestConfigs'; // Import new config
 import './PracticePage.css';
 
 const PracticePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [selectedSubtopic, setSelectedSubtopic] = useState('');
-  const [numQuestions, setNumQuestions] = useState(0);
+  const [selectedPracticeTestType, setSelectedPracticeTestType] = useState(''); // e.g., "SAT", "ACT", "General"
+  const [selectedPracticeCategoryKey, setSelectedPracticeCategoryKey] = useState(''); // e.g., "Math", "Algebra Basics"
+
+  // This will store the full config object for the selected practice section
+  const [selectedPracticeConfig, setSelectedPracticeConfig] = useState(null);
+
   const [showSelections, setShowSelections] = useState(true);
   const [pageTitleOverride, setPageTitleOverride] = useState(null);
-  const [quizKey, setQuizKey] = useState(0); // Used to force re-mount of QuizPlayer
+  const [quizKey, setQuizKey] = useState(0);
 
-  // Placeholder data for topic selections
-  const topics = {
-    Math: ['Algebra', 'Geometry', 'Trigonometry', 'Statistics'],
-    Reading: ['Main Idea', 'Inference', 'Vocabulary in Context', 'Purpose'],
-    Writing: ['Grammar Usage', 'Punctuation', 'Sentence Structure', 'Rhetorical Skills'],
+  const handlePracticeTestTypeChange = (event) => {
+    setSelectedPracticeTestType(event.target.value);
+    setSelectedPracticeCategoryKey('');
+    setSelectedPracticeConfig(null);
   };
 
-  const handleTopicChange = (event) => {
-    setSelectedTopic(event.target.value);
-    setSelectedSubtopic('');
-    setNumQuestions(0);
+  const handlePracticeCategoryChange = (event) => {
+    const categoryKey = event.target.value;
+    setSelectedPracticeCategoryKey(categoryKey);
+    if (categoryKey && practiceSections[selectedPracticeTestType]?.categories?.[categoryKey]) {
+      setSelectedPracticeConfig(practiceSections[selectedPracticeTestType].categories[categoryKey]);
+    } else {
+      setSelectedPracticeConfig(null);
+    }
   };
 
-  const handleSubtopicChange = (event) => {
-    setSelectedSubtopic(event.target.value);
-  };
+  // Auto-start logic from Dashboard/AITutorPage
+   useEffect(() => {
+    if (location.state && location.state.topic && location.state.subTopic && location.state.numQuestions && location.state.description) {
+      // This auto-start logic is more geared towards the old structure.
+      // For practiceSections, the `topic` from dashboard might be `currentMainCategory` (e.g. "Math")
+      // and `subTopic` from dashboard might be `currentSubTopicKey` (e.g. "Algebra: Linear Equations")
+      // We need to find a matching config in `practiceSections`.
+      // This is a simplified approach for now: if description matches a title, use that.
+      const { description } = location.state;
+      let foundConfig = null;
+      let foundTestType = '';
+      let foundCategoryKey = '';
 
-  const handleNumQuestionsClick = (num) => {
-    setNumQuestions(num);
-  };
-
-  // Effect to handle auto-start from navigation state (e.g., from Dashboard)
-  useEffect(() => {
-    if (location.state && location.state.topic && location.state.subTopic && location.state.numQuestions) {
-      const { topic, subTopic, numQuestions: numQsFromState, description } = location.state;
-      
-      if (sessionStorage.getItem('practicePageAutoStarted') === JSON.stringify(location.state)) {
-        return;
+      for (const testType in practiceSections) {
+        for (const catKey in practiceSections[testType].categories) {
+          if (practiceSections[testType].categories[catKey].title === description) {
+            foundConfig = practiceSections[testType].categories[catKey];
+            foundTestType = testType;
+            foundCategoryKey = catKey;
+            break;
+          }
+        }
+        if (foundConfig) break;
       }
+      
+      if (foundConfig && sessionStorage.getItem('practicePageAutoStarted') !== JSON.stringify(location.state)) {
+        console.log("PracticePage: Auto-starting with config:", foundConfig);
+        setSelectedPracticeTestType(foundTestType);
+        setSelectedPracticeCategoryKey(foundCategoryKey);
+        setSelectedPracticeConfig(foundConfig);
+        setPageTitleOverride(`Starting: ${foundConfig.title}`);
 
-      console.log("PracticePage: Received state for auto-start:", location.state);
-      setSelectedTopic(topic);
-      setSelectedSubtopic(subTopic);
-      setNumQuestions(numQsFromState);
-      if (description) {
-        setPageTitleOverride(`Starting: ${description}`);
+        sessionStorage.setItem('practicePageAutoStarted', JSON.stringify(location.state));
+        navigate(location.pathname, { replace: true, state: {} });
+
+        setShowSelections(false);
+        setQuizKey(prevKey => prevKey + 1);
+      } else if (!foundConfig) {
+        console.warn("PracticePage: Auto-start state received, but no matching practice config found for description:", description);
+        sessionStorage.removeItem('practicePageAutoStarted');
       }
-      
-      sessionStorage.setItem('practicePageAutoStarted', JSON.stringify(location.state));
-      navigate(location.pathname, { replace: true, state: {} });
-
-      // Directly trigger start after states are set
-      setShowSelections(false);
-      setQuizKey(prevKey => prevKey + 1); // Change key to force QuizPlayer remount
-      
     } else {
       sessionStorage.removeItem('practicePageAutoStarted');
     }
@@ -66,105 +82,103 @@ const PracticePage = () => {
 
 
   const handleStartPractice = () => {
-    if (!selectedTopic || !selectedSubtopic || numQuestions === 0) {
-      alert('Please select a topic, subtopic, and number of questions.');
+    if (!selectedPracticeConfig) {
+      alert('Please select a practice area.');
       return;
     }
-    setPageTitleOverride(null); // Clear any title from nav-based start
+    setPageTitleOverride(null);
     setShowSelections(false);
-    setQuizKey(prevKey => prevKey + 1); // Increment key to remount QuizPlayer
+    setQuizKey(prevKey => prevKey + 1);
   };
 
   const handleQuizCompletion = (results) => {
     console.log("PracticePage: QuizPlayer finished.", results);
-    // Could show a summary here, or offer to go back to selections
-    // For now, QuizPlayer handles its own results screen.
-    // To return to selection screen from PracticePage after QuizPlayer is done:
-    // setShowSelections(true); // This might be triggered by a button within QuizPlayer via a prop
+    // TODO: Potentially show a modal or message here before resetting to selections.
+    // For now, upon completion, QuizPlayer shows its own results, and user can navigate back.
+    // If we want PracticePage to take over after QuizPlayer's own results screen:
+    // setShowSelections(true); // This would bring user back to selection screen.
   };
   
-  // If user exits QuizPlayer (e.g. "Back to Dashboard" or a new "Exit Quiz" button)
-  // we might want to show selections again. This could be a prop function passed to QuizPlayer.
-  const handleExitQuizPlayer = () => {
-    setShowSelections(true);
-    setPageTitleOverride(null);
-    // Reset selections if desired
-    // setSelectedTopic('');
-    // setSelectedSubtopic('');
-    // setNumQuestions(0);
-  }
+  // const handleExitQuizPlayer = () => { // If QuizPlayer had an "Exit" button
+  //   setShowSelections(true);
+  //   setPageTitleOverride(null);
+  //   setSelectedPracticeTestType('');
+  //   setSelectedPracticeCategoryKey('');
+  //   setSelectedPracticeConfig(null);
+  // }
 
+  if (!showSelections && selectedPracticeConfig) {
+    let apiParamsForQuiz = { ...selectedPracticeConfig.apiParams };
+    let numQuestionsForQuiz = selectedPracticeConfig.numQuestions;
 
-  if (!showSelections) {
-    const apiParams = {
-      topic: selectedTopic,
-      subTopic: selectedSubtopic,
-      numQuestions: numQuestions,
-      // testType: "PRACTICE" // Optional: could add a general type for logging or backend logic
-    };
+    if (selectedPracticeConfig.isAdaptive) {
+      // For the first module of an adaptive SAT section
+      apiParamsForQuiz.module = 1;
+      apiParamsForQuiz.totalQuestionsInModule = selectedPracticeConfig.questionsPerModule.module1;
+      // For practice, we might want to let user pick number of questions for the first module, up to total.
+      // Or just use the configured number for the module. For simplicity, using configured number.
+      numQuestionsForQuiz = selectedPracticeConfig.questionsPerModule.module1;
+      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    } else {
+      // For non-adaptive, numQuestions is already in apiParams or from selectedPracticeConfig.numQuestions
+      apiParamsForQuiz.numQuestions = numQuestionsForQuiz;
+    }
+
     return (
       <QuizPlayer
-        key={quizKey} // Force re-mount when key changes
-        quizTitle={`Practice: ${selectedTopic} - ${selectedSubtopic}`}
-        apiParams={apiParams}
-        showImmediateFeedback={true}
+        key={quizKey}
+        quizTitle={selectedPracticeConfig.title}
+        apiParams={apiParamsForQuiz}
+        showImmediateFeedback={true} // Practice mode usually has immediate feedback
         confettiOnComplete={true}
         onQuizComplete={handleQuizCompletion}
-        // onExit={handleExitQuizPlayer} // Example of a prop to return to selection
+        // onExit={handleExitQuizPlayer}
         pageSpecificClassName="practice-page-container"
+        // Props for SAT adaptivity (will be used by QuizPlayer if apiParams.testType is SAT and isAdaptive is true)
+        isSatAdaptiveModule1={selectedPracticeConfig.isAdaptive && selectedPracticeConfig.apiParams?.testType === "SAT"} // Pass if it's module 1
+        satSectionType={selectedPracticeConfig.satSectionType || null} // e.g. "Math" or "Reading & Writing"
+        questionsPerModule={selectedPracticeConfig.questionsPerModule || null}
       />
     );
   }
 
-  // Initial selection view
+  const availableCategories = selectedPracticeTestType ? Object.keys(practiceSections[selectedPracticeTestType].categories) : [];
+
   return (
     <div className="page-container practice-page-container">
       <h1 className="page-title">{pageTitleOverride || "Practice Zone"}</h1>
-      {/* Removed loading state that was specific to internal question fetching */}
       <div className="card">
         <div className="form-group">
-          <label htmlFor="topic-select">Choose a Topic:</label>
-          <select id="topic-select" value={selectedTopic} onChange={handleTopicChange} className="form-control">
-            <option value="">-- Select Topic --</option>
-            {Object.keys(topics).map(topic => (
-              <option key={topic} value={topic}>{topic}</option>
+          <label htmlFor="practice-test-type-select">Select Type:</label>
+          <select id="practice-test-type-select" value={selectedPracticeTestType} onChange={handlePracticeTestTypeChange} className="form-control">
+            <option value="">-- Select Type --</option>
+            {Object.keys(practiceSections).map(typeKey => (
+              <option key={typeKey} value={typeKey}>{typeKey}</option>
             ))}
           </select>
         </div>
 
-        {selectedTopic && (
+        {selectedPracticeTestType && (
           <div className="form-group">
-            <label htmlFor="subtopic-select">Choose a Subtopic:</label>
-            <select id="subtopic-select" value={selectedSubtopic} onChange={handleSubtopicChange} className="form-control">
-              <option value="">-- Select Subtopic --</option>
-              {topics[selectedTopic]?.map(subtopic => (
-                <option key={subtopic} value={subtopic}>{subtopic}</option>
+            <label htmlFor="practice-category-select">Select Section/Category:</label>
+            <select id="practice-category-select" value={selectedPracticeCategoryKey} onChange={handlePracticeCategoryChange} className="form-control" disabled={availableCategories.length === 0}>
+              <option value="">-- Select Section/Category --</option>
+              {availableCategories.map(catKey => (
+                <option key={catKey} value={catKey}>
+                  {practiceSections[selectedPracticeTestType].categories[catKey].title}
+                </option>
               ))}
             </select>
           </div>
         )}
-
-        {selectedSubtopic && (
-          <div className="form-group">
-            <label>Number of Questions:</label>
-            <div className="question-buttons">
-              {[5, 10, 15].map(num => (
-                <button
-                  key={num}
-                  onClick={() => handleNumQuestionsClick(num)}
-                  className={`button button-outline-primary ${numQuestions === num ? 'active' : ''}`}
-                >
-                  {num} Questions
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
         
+        {/* Number of questions selection could be re-added here for "General" practice types if desired */}
+        {/* For now, numQuestions is derived from config */}
+
         <button
           className="button button-success button-block"
           onClick={handleStartPractice}
-          disabled={!selectedTopic || !selectedSubtopic || numQuestions === 0}
+          disabled={!selectedPracticeConfig}
         >
           Start Practice
         </button>

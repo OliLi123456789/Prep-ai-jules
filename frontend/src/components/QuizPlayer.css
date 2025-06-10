@@ -18,3 +18,28 @@
   /* For example, if it needs a different max-width by default: */
   /* max-width: 800px; */
 }
+
+.standalone-question-view .session-info,
+.standalone-question-view .navigation-buttons,
+.standalone-question-view .explanation-area {
+  /* These are typically hidden in standalone mode by JSX logic, but this is a fallback */
+  display: none !important;
+}
+
+.transition-screen {
+  text-align: center;
+  padding: var(--spacing-unit) * 3;
+}
+.transition-screen h2 {
+  font-size: 1.8rem;
+  color: var(--primary-color);
+  margin-bottom: var(--spacing-unit) * 1.5;
+}
+.transition-screen p {
+  font-size: 1.1rem;
+  margin-bottom: var(--spacing-unit) * 1.5;
+  line-height: 1.6;
+}
+.transition-screen .button-lg { /* Ensure large button style is applied if used */
+  margin-top: var(--spacing-unit) * 2;
+}

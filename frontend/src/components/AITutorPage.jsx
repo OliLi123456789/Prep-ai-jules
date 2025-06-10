@@ -23,7 +23,11 @@ const AITutorPage = () => {
   const [module1Performance, setModule1Performance] = useState(null); // "low", "medium", "high"
   const [questionsPerModule, setQuestionsPerModule] = useState({ module1: 22, module2: 22 }); // Example for SAT Math
   const [questionsAnsweredInModule, setQuestionsAnsweredInModule] = useState(0);
-  const [showPerformanceButtons, setShowPerformanceButtons] = useState(false);
+  // const [showPerformanceButtons, setShowPerformanceButtons] = useState(false); // Removed
+
+  // New states for M1 answers and questions
+  const [module1Answers, setModule1Answers] = useState({}); // { [questionId]: selectedOption }
+  const [module1Questions, setModule1Questions] = useState([]); // Array of full question objects for M1
 
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +40,9 @@ const AITutorPage = () => {
     setCurrentSatModule(1);
     setModule1Performance(null);
     setQuestionsAnsweredInModule(0);
-    setShowPerformanceButtons(false);
+    // setShowPerformanceButtons(false); // Removed
+    setModule1Answers({});
+    setModule1Questions([]);
   };
 
   const handleTestTypeSelect = (testType) => {
@@ -112,18 +118,19 @@ const AITutorPage = () => {
     let localIsAdaptiveMode = isAdaptiveSatMode;
     let localQuestionsPerModule = questionsPerModule;
 
-    // If this is the very first call (not a "Next Question" or simulated performance call)
-    if (!guidedPracticeData.isActive && !simulatedPerformance) {
-      qAnsweredInModule = 0; // Reset for new session
+    // If this is the very first call (not a "Next Question" or transitioning to M2 based on actual performance)
+    if (!guidedPracticeData.isActive && !module1Performance) { // module1Performance is null when starting M1
+      qAnsweredInModule = 0;
       setQuestionsAnsweredInModule(0);
+      setModule1Answers({}); // Reset M1 answers
+      setModule1Questions([]); // Reset M1 questions
+
       if (currentTestType === "SAT" && (currentMainCategory === "Math" || currentMainCategory === "Reading" || currentMainCategory === "Writing & Language")) {
         setIsAdaptiveSatMode(true);
         localIsAdaptiveMode = true;
         setCurrentSatModule(1);
         nextModule = 1;
-        setModule1Performance(null); // Clear previous M1 performance
-        nextPerf = null;
-        setShowPerformanceButtons(false);
+        // module1Performance is already null, nextPerf will be null for M1
         // Set questionsPerModule based on category (example)
         if (currentMainCategory === "Math") {
           localQuestionsPerModule = { module1: 22, module2: 22 };
@@ -132,34 +139,23 @@ const AITutorPage = () => {
         }
         setQuestionsPerModule(localQuestionsPerModule);
       } else {
-        setIsAdaptiveSatMode(false); // Ensure it's off for non-adaptive
+        setIsAdaptiveSatMode(false);
         localIsAdaptiveMode = false;
       }
-    } else if (!simulatedPerformance && guidedPracticeData.isActive) {
-      // This is a "Next Question" click
-      qAnsweredInModule++;
+    } else if (guidedPracticeData.isActive && !simulatedPerformance) { // This is a "Next Question" click within the current module
+      qAnsweredInModule = questionsAnsweredInModule; // Current number answered before this new one
     }
-
-
-    if (simulatedPerformance) { // Transitioning to Module 2
-      nextModule = 2;
-      nextPerf = simulatedPerformance;
-      qAnsweredInModule = 0; // Reset for Module 2
-      setShowPerformanceButtons(false);
-      setCurrentSatModule(2);
-      setModule1Performance(simulatedPerformance);
-      setQuestionsAnsweredInModule(0);
-    }
+    // If simulatedPerformance is passed, it's handled by finalizeModule1AndProceed which then calls this function.
+    // Or, if we are proceeding to Module 2 based on calculated performance, module1Performance state is already set.
+    // In that case, nextPerf will be module1Performance, nextModule will be 2, and qAnsweredInModule is reset by finalize.
 
     // Check for session/module completion BEFORE fetching new question
     if (localIsAdaptiveMode) {
-      if (nextModule === 1 && qAnsweredInModule >= localQuestionsPerModule.module1) {
-        setShowPerformanceButtons(true);
-        setGuidedPracticeData(prev => ({ ...prev, question: null, guidance: null, error: null, isActive: true })); // Keep active to show buttons
-        setIsLoading(false);
-        return;
+      if (currentSatModule === 1 && qAnsweredInModule >= localQuestionsPerModule.module1) {
+        finalizeModule1AndProceed(); // Calculate M1 performance and transition
+        return; // finalizeModule1AndProceed will call fetchGuidedQuestion for M2
       }
-      if (nextModule === 2 && qAnsweredInModule >= localQuestionsPerModule.module2) {
+      if (currentSatModule === 2 && qAnsweredInModule >= localQuestionsPerModule.module2) {
         setGuidedPracticeData(prev => ({ ...prev, isActive: false, question: null, guidance: "SAT adaptive session complete!", error: null }));
         setIsLoading(false);
         resetAdaptiveStates();
@@ -211,8 +207,12 @@ const AITutorPage = () => {
         throw new Error("No question generated for this topic/difficulty.");
       }
       questionObject = qData[0];
+
+      if (localIsAdaptiveMode && currentSatModule === 1) {
+        setModule1Questions(prev => [...prev, questionObject]); // Store M1 question
+      }
       setGuidedPracticeData(prev => ({ ...prev, question: questionObject, error: null }));
-      setQuestionsAnsweredInModule(qAnsweredInModule + 1); // Update state after successful fetch
+      setQuestionsAnsweredInModule(questionNumberStart); // Set to the number of the question just fetched
     } catch (err) {
       console.error("Fetch question error:", err);
       setGuidedPracticeData(prev => ({ ...prev, isActive: false, error: err.message }));
@@ -246,11 +246,54 @@ const AITutorPage = () => {
     setIsLoading(false);
   };
 
+  const handleAnswerSelectForModule1 = (selectedOption, questionId) => {
+    // Use question_id if available, otherwise question_text as a fallback key
+    const key = questionId || module1Questions.find(q => q.options.includes(selectedOption))?.question_text;
+    if (key) {
+      setModule1Answers(prev => ({ ...prev, [key]: selectedOption }));
+    }
+  };
+
+  const finalizeModule1AndProceed = () => {
+    let correctCount = 0;
+    module1Questions.forEach(q => {
+      const questionId = q.question_id || q.question_text; // Match key used in handleAnswerSelectForModule1
+      if (module1Answers[questionId] === q.correct_answer) {
+        correctCount++;
+      }
+    });
+
+    const totalM1Questions = module1Questions.length;
+    let perfBand = "medium"; // Default
+    if (totalM1Questions > 0) {
+      const percentage = correctCount / totalM1Questions;
+      if (percentage < 0.4) perfBand = "low";
+      else if (percentage > 0.7) perfBand = "high";
+    }
+
+    console.log(`Module 1 Performance: ${correctCount}/${totalM1Questions} -> ${perfBand}`);
+
+    // Set states to transition to Module 2
+    setModule1Performance(perfBand);
+    setCurrentSatModule(2);
+    setQuestionsAnsweredInModule(0); // Reset for module 2
+    setGuidedPracticeData(prev => ({ ...prev, question: null, guidance: null, error: null, isActive: true })); // Keep session active for M2
+
+    // Clear M1 specific data
+    setModule1Answers({});
+    setModule1Questions([]);
+
+    // Automatically fetch the first question of Module 2
+    // fetchGuidedQuestion will use the new currentSatModule (2) and module1Performance state
+    fetchGuidedQuestion();
+  };
+
+
   const handleStopPractice = () => {
     setGuidedPracticeData({ question: null, guidance: null, isActive: false, error: null });
     setError(null);
-    resetAdaptiveStates(); // This will also reset questionsAnsweredInModule
-    setLearningContent(null); // Clear learning content as well
+    resetAdaptiveStates();
+    setLearningContent(null);
   };
 
   const getSelectionPath = () => {
@@ -380,57 +423,59 @@ const AITutorPage = () => {
           <div className="action-section guided-practice-section card">
             <h3 className="card-title section-title">Practice with Guidance</h3>
             <button
-              onClick={() => fetchGuidedQuestion()} // Main action button
+              onClick={() => fetchGuidedQuestion()}
               className="button button-success action-button"
               disabled={
                 !selectedTopicDetails?.supportsGuidance ||
                 isLoading ||
-                showPerformanceButtons ||
-                (guidedPracticeData.isActive && !guidedPracticeData.question && !guidedPracticeData.error) // Prevent multiple clicks if already active but no question yet (e.g. session complete message shown)
+                // Removed showPerformanceButtons from here as it's handled by finalizeModule1AndProceed
+                (guidedPracticeData.isActive && !guidedPracticeData.question && !guidedPracticeData.error && !isAdaptiveSatMode && questionsAnsweredInModule >= NON_ADAPTIVE_SESSION_LENGTH) || // Session ended (non-adaptive)
+                (guidedPracticeData.isActive && !guidedPracticeData.question && !guidedPracticeData.error && isAdaptiveSatMode && currentSatModule === 2 && questionsAnsweredInModule >= questionsPerModule.module2) // Session ended (adaptive M2)
               }
             >
               {isLoading && guidedPracticeData.isActive ? 'Loading...' :
-               showPerformanceButtons ? 'Awaiting Performance Input...' :
                !guidedPracticeData.isActive ? 'Start Guided Practice' :
-               isAdaptiveSatMode && currentSatModule === 1 && questionsAnsweredInModule < questionsPerModule.module1 ? `Next Question (M1: ${questionsAnsweredInModule}/${questionsPerModule.module1})` :
-               isAdaptiveSatMode && currentSatModule === 2 && questionsAnsweredInModule < questionsPerModule.module2 ? `Next Question (M2: ${questionsAnsweredInModule}/${questionsPerModule.module2})` :
-               !isAdaptiveSatMode && questionsAnsweredInModule < NON_ADAPTIVE_SESSION_LENGTH ? `Next Question (${questionsAnsweredInModule}/${NON_ADAPTIVE_SESSION_LENGTH})` :
-               'Start Guided Practice' // Default or after completion
+               (isAdaptiveSatMode && currentSatModule === 1 && questionsAnsweredInModule < questionsPerModule.module1) ? `Next Question (M1: ${questionsAnsweredInModule}/${questionsPerModule.module1})` :
+               (isAdaptiveSatMode && currentSatModule === 2 && questionsAnsweredInModule < questionsPerModule.module2) ? `Next Question (M2: ${questionsAnsweredInModule}/${questionsPerModule.module2})` :
+               (!isAdaptiveSatMode && questionsAnsweredInModule < NON_ADAPTIVE_SESSION_LENGTH) ? `Next Question (${questionsAnsweredInModule}/${NON_ADAPTIVE_SESSION_LENGTH})` :
+               'Start Guided Practice'
               }
             </button>
 
-            {isAdaptiveSatMode && guidedPracticeData.isActive && !showPerformanceButtons && (
+            {isAdaptiveSatMode && guidedPracticeData.isActive && (
                  <p className="adaptive-mode-info">
                     SAT Adaptive Mode: Module {currentSatModule} - Question {questionsAnsweredInModule > 0 ? questionsAnsweredInModule : '1'} of {currentSatModule === 1 ? questionsPerModule.module1 : questionsPerModule.module2}
                  </p>
             )}
 
-            {showPerformanceButtons && isAdaptiveSatMode && (
-              <div className="performance-simulation-buttons card">
-                <h4>Module 1 Complete! Simulate Performance for Module 2:</h4>
-                <button className="button button-outline-primary" onClick={() => fetchGuidedQuestion("low")}>Low Performance</button>
-                <button className="button button-outline-primary" onClick={() => fetchGuidedQuestion("medium")}>Medium Performance</button>
-                <button className="button button-outline-primary" onClick={() => fetchGuidedQuestion("high")}>High Performance</button>
-              </div>
-            )}
+            {/* Performance buttons removed - logic is now internal to finalizeModule1AndProceed */}
 
-            {/* Loading message specific to this section if not covered by main isLoading */}
-            {guidedPracticeData.isActive && isLoading && !showPerformanceButtons && (
+            {/* Loading message specific to this section */}
+            {guidedPracticeData.isActive && isLoading && (
               <p className="loading-message">Loading guided practice...</p>
             )}
             {/* Error specific to this section */}
-            {guidedPracticeData.error && !showPerformanceButtons && (
+            {guidedPracticeData.error && (
               <p className="error-message">{guidedPracticeData.error}</p>
             )}
 
             {/* Content display area */}
-            {guidedPracticeData.isActive && !isLoading && !showPerformanceButtons && (guidedPracticeData.question || guidedPracticeData.guidance) && (
+            {guidedPracticeData.isActive && !isLoading && (guidedPracticeData.question || guidedPracticeData.guidance) && (
               <div className="content-display-box guided-practice-display">
                 {guidedPracticeData.question && (
                   <QuizPlayer
                     isStandaloneQuestion={true}
                     initialQuestion={guidedPracticeData.question}
                     showOptionPrefixes={true}
+                    onAnswerSelect={(selectedOption, questionId) => {
+                      if (isAdaptiveSatMode && currentSatModule === 1) {
+                        handleAnswerSelectForModule1(selectedOption, questionId);
+                      }
+                      // For non-adaptive or M2, selection is just for display, not stored for performance calc by AITutorPage
+                    }}
+                    // Pass showImmediateFeedback=false to QuizPlayer if it's SAT M1
+                    // This allows QuizPlayer to handle selection state without revealing answers.
+                    showImmediateFeedback={!(isAdaptiveSatMode && currentSatModule === 1)}
                     pageSpecificClassName="guided-practice-question-display"
                   />
                 )}
