@@ -1,23 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { InlineMath, BlockMath } from 'react-katex';
-import 'katex/dist/katex.min.css'; // Import KaTeX CSS
+import 'katex/dist/katex.min.css';
 import './AILearnPage.css';
 
-// Utility function to render text with LaTeX
-const renderTextWithLaTeX = (text) => {
-  if (!text) return null;
-  // Regex to find $...$ and $$...$$
-  const parts = text.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
-    } else if (part.startsWith('$') && part.endsWith('$')) {
-      return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
-    }
-    return part; // Regular text part
-  });
+// Combined Markdown and LaTeX Renderer Component
+const MarkdownWithLaTeX = ({ content }) => {
+  if (!content) return null;
+
+  // Custom renderers for ReactMarkdown
+  const components = {
+    // Render inline code `like this` as inline math
+    code: ({ inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      if (inline) {
+        // Check for a specific class or prefix if needed, e.g. className === 'math-inline'
+        // For now, assume any inline code is LaTeX if it's simple $...$
+        // This simple heuristic might need refinement.
+        // A more robust way is to have the LLM output specific Markdown like `$...$`
+        // and then use remark-math and rehype-katex with ReactMarkdown.
+        // Or, the LLM uses specific class for math code blocks.
+        // Given current `renderTextWithLaTeX` relies on $ and $$, we try to replicate.
+        // This part is tricky if Markdown also uses backticks for non-math code.
+        // For this subtask, we'll assume $ and $$ are outside Markdown code blocks,
+        // and ReactMarkdown will pass them as text to the `p` or `li` renderers.
+        // So, we focus on rendering paragraphs/list items and then parsing their text content.
+        return <code className={className} {...props}>{children}</code>;
+      }
+      // For block code ```...```, we'll assume it's not LaTeX for now unless specified by language-latex
+      if (match && match[1] === 'latex') {
+        return <BlockMath math={String(children).replace(/\n$/, '')} />;
+      }
+      return <code className={className} {...props}>{children}</code>;
+    },
+    // Process text nodes within paragraphs, list items, etc.
+    p: ({ node, ...props }) => <p>{renderTextNodesWithLaTeX(props.children)}</p>,
+    li: ({ node, ...props }) => <li>{renderTextNodesWithLaTeX(props.children)}</li>,
+    // Add other elements as needed: h1, h2, etc.
+    h1: ({ node, ...props }) => <h1>{renderTextNodesWithLaTeX(props.children)}</h1>,
+    h2: ({ node, ...props }) => <h2>{renderTextNodesWithLaTeX(props.children)}</h2>,
+    h3: ({ node, ...props }) => <h3>{renderTextNodesWithLaTeX(props.children)}</h3>,
+    h4: ({ node, ...props }) => <h4>{renderTextNodesWithLaTeX(props.children)}</h4>,
+    // Potentially for table cells (td, th) as well if tables are used.
+    td: ({ node, ...props }) => <td>{renderTextNodesWithLaTeX(props.children)}</td>,
+    th: ({ node, ...props }) => <th>{renderTextNodesWithLaTeX(props.children)}</th>,
+  };
+
+  // Helper to process child nodes (recursively if needed, but simpler for now)
+  const renderTextNodesWithLaTeX = (children) => {
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') {
+        const parts = child.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
+        return parts.map((part, index) => {
+          if (part.startsWith('$$') && part.endsWith('$$')) {
+            return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
+          } else if (part.startsWith('$') && part.endsWith('$')) {
+            return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
+          }
+          return part;
+        });
+      }
+      return child; // Return other elements like <strong>, <em> as is
+    });
+  };
+
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content}</ReactMarkdown>;
 };
+
 
 const AILearnPage = () => {
   const location = useLocation();
@@ -264,7 +315,7 @@ const AILearnPage = () => {
           
           <section className="module-section introduction-section">
             <h3>Introduction</h3>
-            <div>{renderTextWithLaTeX(learningModule.introduction)}</div>
+            <MarkdownWithLaTeX content={learningModule.introduction} />
           </section>
 
           <section className="module-section key-concepts-section">
@@ -272,8 +323,8 @@ const AILearnPage = () => {
             {learningModule.key_concepts.map((concept, index) => (
               <div key={index} className="key-concept">
                 <h4>{index + 1}. {concept.concept_name}</h4>
-                <div className="concept-explanation"><strong>Explanation:</strong> {renderTextWithLaTeX(concept.explanation)}</div>
-                <div className="concept-example"><strong>Example:</strong> {renderTextWithLaTeX(concept.example)}</div>
+                <div className="concept-explanation"><strong>Explanation:</strong> <MarkdownWithLaTeX content={concept.explanation} /></div>
+                <div className="concept-example"><strong>Example:</strong> <MarkdownWithLaTeX content={concept.example} /></div>
               </div>
             ))}
           </section>
@@ -281,13 +332,8 @@ const AILearnPage = () => {
           <section className="module-section practice-questions-section">
             <h3>Practice Questions</h3>
             {learningModule.practice_questions.map((pq, index) => (
-              // Assuming QuizPlayer or a similar component would be used here for actual questions,
-              // which already has LaTeX rendering for visual_assets.
-              // If pq.question_text or pq.explanation themselves are expected to have inline LaTeX,
-              // they would need renderTextWithLaTeX as well.
-              // For now, let's assume question text/explanations from this part of the module are simple or use visual_assets.
               <div key={index} className="practice-question-item">
-                <div className="pq-text"><strong>Question {index + 1}:</strong> {renderTextWithLaTeX(pq.question_text)}</div>
+                <div className="pq-text"><strong>Question {index + 1}:</strong> <MarkdownWithLaTeX content={pq.question_text} /></div>
                 <div className="options-list pq-options">
                   {pq.options.map((option, optIndex) => (
                     <button 
@@ -301,7 +347,7 @@ const AILearnPage = () => {
                       onClick={() => handlePracticeOptionSelect(index, option)}
                       disabled={userPracticeAnswers[index]?.revealed}
                     >
-                      {option}
+                      {option} {/* Assuming options are plain text or handled separately if they can contain MD/LaTeX */}
                     </button>
                   ))}
                 </div>
@@ -314,7 +360,7 @@ const AILearnPage = () => {
                   <div className="explanation-area pq-explanation">
                     <p><strong>Your Answer:</strong> {userPracticeAnswers[index].selected} ({userPracticeAnswers[index].correct ? "Correct" : "Incorrect"})</p>
                     <p><strong>Correct Answer:</strong> {pq.correct_answer}</p>
-                    <div className="pq-explanation"><strong>Explanation:</strong> {renderTextWithLaTeX(pq.explanation)}</div>
+                    <div className="pq-explanation"><strong>Explanation:</strong> <MarkdownWithLaTeX content={pq.explanation} /></div>
                   </div>
                 )}
               </div>
@@ -323,7 +369,7 @@ const AILearnPage = () => {
 
           <section className="module-section summary-section">
             <h3>Summary</h3>
-            <div>{renderTextWithLaTeX(learningModule.summary)}</div>
+            <MarkdownWithLaTeX content={learningModule.summary} />
           </section>
         </div>
       )}

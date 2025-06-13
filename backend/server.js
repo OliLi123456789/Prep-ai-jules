@@ -182,6 +182,130 @@ app.post('/api/generate-questions', async (req, res) => {
   }
 });
 
+// --- AI Suggested Practice Endpoint ---
+app.post('/api/ai-suggested-practice', async (req, res) => {
+  try {
+    const userDataString = await fs.readFile(mockDataPath, 'utf8');
+    const userData = JSON.parse(userDataString);
+    const { practiceHistory = [], testDetails } = userData;
+
+    // Default suggestion (foundational or common topic)
+    // This should ideally try to match a 'title' from frontend's practiceTestConfigs.js
+    let suggestion = {
+      description: "Practice SAT Math - Algebra Basics", // A title likely in practiceTestConfigs
+      apiParams: { testType: "SAT", topic: "Math", subTopic: "Algebra Basics" }, // Fallback apiParams
+      numQuestions: 10,
+      adaptive: "false" // String 'false' as per example, or boolean false
+    };
+
+    if (practiceHistory.length === 0) {
+      // If no history, return a default foundational topic.
+      // Try to pick one that's likely in General or SAT Math.
+      // This default is okay, but could be made more robust by checking testStructures.json
+      if (testStructures["SAT"]?.Math?.subTopics?.["Algebra"]) { // Check if Algebra exists for SAT Math
+        suggestion = {
+          description: "Practice SAT Math - Algebra",
+          apiParams: { testType: "SAT", topic: "Math", subTopic: "Algebra" },
+          numQuestions: 10,
+          adaptive: "false"
+        };
+      } else if (testStructures["General"]?.Math?.subTopics?.["Algebra Basics"]) {
+         suggestion = {
+          description: "Practice General Math - Algebra Basics",
+          apiParams: { testType: "General", topic: "Math", subTopic: "Algebra Basics" },
+          numQuestions: 10,
+          adaptive: "false"
+        };
+      }
+      // If neither, the initial default will be used.
+      return res.json(suggestion);
+    }
+
+    // Calculate average scores for each topic/subTopic
+    const performance = {};
+    practiceHistory.forEach(item => {
+      if (item.type === 'practice' && typeof item.scorePercent === 'number' && item.topic && item.subTopic) {
+        const key = `${item.topic} - ${item.subTopic}`; // Use a combined key
+        if (!performance[key]) {
+          performance[key] = { totalScore: 0, count: 0, dates: [] };
+        }
+        performance[key].totalScore += item.scorePercent;
+        performance[key].count += 1;
+        if (item.date) performance[key].dates.push(new Date(item.date));
+      }
+    });
+
+    let lowestScore = Infinity;
+    let topicsForImprovement = [];
+
+    for (const key in performance) {
+      const avgScore = performance[key].totalScore / performance[key].count;
+      performance[key].avgScore = avgScore;
+      // Find the latest date practiced for this topic
+      performance[key].lastPracticed = performance[key].dates.length > 0 ?
+                                       new Date(Math.max.apply(null, performance[key].dates)) :
+                                       new Date(0); // Jan 1, 1970 if never practiced with date
+
+      if (avgScore < lowestScore) {
+        lowestScore = avgScore;
+        topicsForImprovement = [key];
+      } else if (avgScore === lowestScore) {
+        topicsForImprovement.push(key);
+      }
+    }
+
+    if (topicsForImprovement.length > 0) {
+      // Sort by least recently practiced among the lowest scores
+      topicsForImprovement.sort((a, b) => performance[a].lastPracticed - performance[b].lastPracticed);
+
+      const [chosenTopic, chosenSubTopic] = topicsForImprovement[0].split(" - ");
+
+      // Attempt to find a testType for this topic/subTopic from testStructures
+      let chosenTestType = "General"; // Default
+      if (testDetails?.testType && testStructures[testDetails.testType]?.[chosenTopic]?.subTopics?.[chosenSubTopic]) {
+          chosenTestType = testDetails.testType;
+      } else { // Fallback search if not in user's preferred testType
+          for (const tt in testStructures) {
+              if (testStructures[tt]?.[chosenTopic]?.subTopics?.[chosenSubTopic]) {
+                  chosenTestType = tt;
+                  break;
+              }
+          }
+      }
+
+      // Construct description to match frontend titles if possible
+      // Example: "Practice SAT Math - Algebra" or "Algebra Basics Practice" (for General)
+      let description;
+      if (chosenTestType === "SAT" || chosenTestType === "ACT") {
+        description = `Practice ${chosenTestType} ${chosenTopic} - ${chosenSubTopic}`;
+      } else { // General or other types
+        description = `${chosenSubTopic} Practice`; // Or more specific if available
+        // Try to match "Algebra Basics Practice" title from practiceTestConfigs for "Algebra Basics"
+        if (chosenTopic === "Math" && chosenSubTopic === "Algebra Basics") {
+            description = "Algebra Basics Practice";
+        }
+      }
+
+
+      suggestion = {
+        description: description,
+        apiParams: { testType: chosenTestType, topic: chosenTopic, subTopic: chosenSubTopic },
+        numQuestions: 10, // Default, could be smarter
+        // Adaptive status should ideally come from a config if this subTopic can be adaptive
+        adaptive: (chosenTestType === "SAT" && (chosenTopic === "Math" || chosenTopic === "Reading & Writing")) ? "true" : "false",
+      };
+    }
+    // If no specific topic for improvement found (e.g., all scores are perfect or no scorable history),
+    // the initial default suggestion will be used.
+
+    res.json(suggestion);
+
+  } catch (error) {
+    console.error("Error generating AI suggested practice:", error);
+    res.status(500).json({ error: true, message: "Failed to generate AI suggested practice.", details: error.message });
+  }
+});
+
 // --- AI Guided Solution Endpoint ---
 app.post('/api/get-guided-solution', async (req, res) => {
   const { questionText, options, correctAnswer, topic, subTopic } = req.body;
@@ -315,11 +439,18 @@ app.get('/api/analytics', async (req, res) => {
 
     // 8. pastTestScoresSummary for full tests
     const pastTestScoresSummary = pastScores
-      .filter(item => item.type && item.type.toLowerCase().includes('full') && item.date && typeof item.overall === 'number')
+      // Filter for items that are explicitly full tests OR are multi-section tests
+      .filter(item =>
+        (item.type && item.type.toLowerCase().includes('full') && item.date && (typeof item.overall === 'number' || typeof item.overallScore === 'string')) ||
+        (item.isMultiSection && item.date && (typeof item.overallScore === 'string' || typeof item.overallScore === 'number'))
+      )
       .map(item => ({
+        testId: item.testId, // Added for potential linking/details
         date: item.date,
-        type: item.type,
-        overall: item.overall,
+        type: item.testName || item.type, // Prefer testName if available (from multi-section)
+        overall: item.overallScore || item.overall, // Use overallScore for multi-section, fallback to overall
+        isMultiSection: item.isMultiSection || false,
+        sections: item.isMultiSection ? item.sections : null // Include sections if multi-section
       }))
       .sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
 
@@ -765,22 +896,22 @@ app.post('/api/ai-learn-topic', async (req, res) => {
 
   const apiUrl = 'https://api.deepseek.com/chat/completions';
   
-  const systemPrompt = "You are an expert educator and curriculum designer. Your task is to generate a structured learning module for SAT/ACT preparation on a specific topic. The module should be comprehensive yet concise. Output ONLY the valid JSON object as specified, with no surrounding text or markdown formatting. For all mathematical formulas, symbols, or equations within the 'introduction', 'key_concepts.explanation', 'key_concepts.example', 'practice_questions.explanation', and 'summary' fields, use LaTeX delimiters: $...$ for inline math and $$...$$ for block math. For 'practice_questions.question_text', if it contains complex math, prefer using the 'visual_assets' field of the question object as specified in other contexts; otherwise, inline LaTeX is acceptable if simple.";
+  const systemPrompt = "You are an expert educator and curriculum designer. Your task is to generate a structured learning module for SAT/ACT preparation on a specific topic. The module should be comprehensive yet concise. Output ONLY the valid JSON object as specified, with no surrounding text or markdown formatting. For all mathematical formulas, symbols, or equations within the 'introduction', 'key_concepts.explanation', 'key_concepts.example', 'practice_questions.explanation', and 'summary' fields, use LaTeX delimiters: $...$ for inline math and $$...$$ for block math. For 'practice_questions.question_text', if it contains complex math, prefer using the 'visual_assets' field of the question object as specified in other contexts; otherwise, inline LaTeX is acceptable if simple. For other formatting needs like lists, bold/italic text, inline code, or simple tables, use standard Markdown syntax within these text fields (e.g., *bold*, _italic_, `inline_code`, lists with -, tables with |).";
   const userPrompt = `Generate a learning module for ${testType} - Section: ${section}, focusing on SubTopic: ${subTopic}.
 The JSON object must have the following structure:
 {
   "title": "Learning Module: [Generated Title for the SubTopic, e.g., Mastering Quadratic Equations]",
-  "introduction": "Engaging introduction to the subtopic (2-4 sentences). Ensure all math is LaTeX delimited, e.g., $ax^2+bx+c=0$.",
+  "introduction": "Engaging introduction to the subtopic (2-4 sentences). Ensure all math is LaTeX delimited (e.g., $ax^2+bx+c=0$) and use Markdown for other formatting if needed.",
   "key_concepts": [
-    { "concept_name": "[Concept 1 Name]", "explanation": "Detailed but clear explanation of concept 1 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 1. Ensure all math is LaTeX delimited (e.g., a solved problem like $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$)." },
-    { "concept_name": "[Concept 2 Name]", "explanation": "Detailed but clear explanation of concept 2 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 2. Ensure all math is LaTeX delimited." },
-    { "concept_name": "[Concept 3 Name]", "explanation": "Detailed but clear explanation of concept 3 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 3. Ensure all math is LaTeX delimited." }
+    { "concept_name": "[Concept 1 Name]", "explanation": "Detailed but clear explanation of concept 1 (3-5 sentences). Ensure all math is LaTeX delimited. Use Markdown for lists, bold/italic, etc., where appropriate.", "example": "A practical example or illustration of concept 1. Ensure all math is LaTeX delimited (e.g., a solved problem like $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$). Use Markdown for formatting." },
+    { "concept_name": "[Concept 2 Name]", "explanation": "Detailed but clear explanation of concept 2 (3-5 sentences). Ensure all math is LaTeX delimited. Use Markdown for formatting.", "example": "A practical example or illustration of concept 2. Ensure all math is LaTeX delimited. Use Markdown for formatting." },
+    { "concept_name": "[Concept 3 Name]", "explanation": "Detailed but clear explanation of concept 3 (3-5 sentences). Ensure all math is LaTeX delimited. Use Markdown for formatting.", "example": "A practical example or illustration of concept 3. Ensure all math is LaTeX delimited. Use Markdown for formatting." }
   ],
   "practice_questions": [
-    { "question_text": "[Question 1 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., A]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited.", "visual_assets": { "type": "latex", "data": "[LaTeX for complex math in question_text]" } },
-    { "question_text": "[Question 2 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., B]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited." }
+    { "question_text": "[Question 1 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine. Markdown can be used for text formatting.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., A]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited. Use Markdown for formatting.", "visual_assets": { "type": "latex", "data": "[LaTeX for complex math in question_text]" } },
+    { "question_text": "[Question 2 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine. Markdown can be used for text formatting.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., B]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited. Use Markdown for formatting." }
   ],
-  "summary": "Key takeaways summarized (2-3 concise bullet points or a short paragraph). Ensure all math is LaTeX delimited."
+  "summary": "Key takeaways summarized (2-3 concise bullet points or a short paragraph). Ensure all math is LaTeX delimited. Use Markdown for list formatting."
 }
 Ensure the 'correct_answer' for practice_questions is just the letter or text of the correct option, matching one of the provided options.
 Produce a JSON object and nothing else.`;

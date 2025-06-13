@@ -1,8 +1,57 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { InlineMath, BlockMath } from 'react-katex';
+import 'katex/dist/katex.min.css'; // Ensure KaTeX CSS is imported
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import './QuizPlayer.css'; // To be created
+
+// Combined Markdown and LaTeX Renderer Component (can be moved to a shared utils file if used elsewhere)
+const MarkdownWithLaTeX = ({ content }) => {
+  if (!content) return null;
+
+  const components = {
+    code: ({ inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      if (inline) {
+        return <code className={className} {...props}>{children}</code>;
+      }
+      if (match && match[1] === 'latex') {
+        return <BlockMath math={String(children).replace(/\n$/, '')} />;
+      }
+      return <code className={className} {...props}>{children}</code>;
+    },
+    p: ({ node, ...props }) => <p>{renderTextNodesWithLaTeX(props.children)}</p>,
+    li: ({ node, ...props }) => <li>{renderTextNodesWithLaTeX(props.children)}</li>,
+    h1: ({ node, ...props }) => <h1>{renderTextNodesWithLaTeX(props.children)}</h1>,
+    h2: ({ node, ...props }) => <h2>{renderTextNodesWithLaTeX(props.children)}</h2>,
+    h3: ({ node, ...props }) => <h3>{renderTextNodesWithLaTeX(props.children)}</h3>,
+    h4: ({ node, ...props }) => <h4>{renderTextNodesWithLaTeX(props.children)}</h4>,
+    td: ({ node, ...props }) => <td>{renderTextNodesWithLaTeX(props.children)}</td>,
+    th: ({ node, ...props }) => <th>{renderTextNodesWithLaTeX(props.children)}</th>,
+  };
+
+  const renderTextNodesWithLaTeX = (children) => {
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') {
+        const parts = child.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
+        return parts.map((part, index) => {
+          if (part.startsWith('$$') && part.endsWith('$$')) {
+            return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
+          } else if (part.startsWith('$') && part.endsWith('$')) {
+            return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
+          }
+          return part;
+        });
+      }
+      return child;
+    });
+  };
+
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content}</ReactMarkdown>;
+};
+
 
 // Default props can be defined here or in the consuming component
 const QuizPlayer = ({
@@ -422,7 +471,7 @@ const QuizPlayer = ({
         </div>
         <div className="explanation-area review-explanation">
           <h4>Explanation:</h4>
-          <p>{reviewQ.explanation}</p>
+          <MarkdownWithLaTeX content={reviewQ.explanation} />
         </div>
         <div className="navigation-buttons">
           <button onClick={() => setReviewQuestionIndex(i => i - 1)} disabled={reviewQuestionIndex === 0} className="button button-secondary">Previous</button>
@@ -529,7 +578,7 @@ const QuizPlayer = ({
       {showImmediateFeedback && currentAttempt && !isStandaloneQuestion && (
         <div className="explanation-area">
           <h4>Explanation:</h4>
-          <p>{currentQuestion.explanation}</p>
+          <MarkdownWithLaTeX content={currentQuestion.explanation} />
         </div>
       )}
 

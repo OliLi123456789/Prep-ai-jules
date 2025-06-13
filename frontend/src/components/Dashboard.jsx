@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, 
-  eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths 
+  eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths,
+  differenceInCalendarDays // Added for test date calculation
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -45,8 +46,12 @@ const DraggableTaskItem = ({ task, originalDateString }) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const userName = "User"; 
-  const testDateInfo = "XX days till your test"; 
+  // const userName = "User"; // To be replaced by profileData
+  // const testDateInfo = "XX days till your test"; // To be replaced by profileData
+
+  const [profileData, setProfileData] = useState(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState(null);
 
   const [calendarPlan, setCalendarPlan] = useState(null); // Stores { startDate, endDate, dailyTasks: [] }
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
@@ -61,8 +66,39 @@ const Dashboard = () => {
     useSensor(KeyboardSensor)
   );
 
+  const [suggestedPracticeLinkState, setSuggestedPracticeLinkState] = useState(null);
+  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const [suggestionError, setSuggestionError] = useState(null);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // Drag if moved 5px
+    useSensor(KeyboardSensor)
+  );
+
   useEffect(() => {
-    // ... (fetchCalendarPlan logic remains the same) ...
+    const fetchProfileData = async () => {
+      setIsLoadingProfile(true);
+      setProfileError(null); // Reset profile error
+      try {
+        const response = await fetch('/api/get-profile-data');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch profile data.');
+        }
+        const data = await response.json();
+        setProfileData(data);
+      } catch (err) {
+        setProfileError(err.message);
+        console.error("Fetch profile error:", err);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    };
+    fetchProfileData(); // Fetch profile on mount
+
     const fetchCalendarPlan = async () => {
       setIsLoadingCalendar(true);
       setCalendarError(null);
@@ -134,7 +170,7 @@ const Dashboard = () => {
 
       if (!taskId || !originalDate || !newDate || !taskDetails) {
         console.error("DragEnd: Missing data", { taskId, originalDate, newDate, taskDetails });
-        setError("Could not move task: essential data missing.");
+        setCalendarError("Could not move task: essential data missing.");
         return;
       }
       if (originalDate === newDate) return; // No change if dropped on the same day
@@ -182,14 +218,45 @@ const Dashboard = () => {
         // setCalendarPlan(result.updatedPlan); 
         console.log("Task rescheduled successfully on backend.");
       } catch (err) {
-        setError(`Failed to save reschedule: ${err.message}. Reverting UI.`);
+        setCalendarError(`Failed to save reschedule: ${err.message}. Reverting UI.`); // Use calendarError
         console.error("Update task day error:", err);
-        // Revert UI (refetch or restore previous state - complex, for now just error message)
-        // For simplicity, we might just refetch the whole plan on error here.
-        // Or, better, store previousPlan before optimistic update and restore it.
-        // This example doesn't implement full revert for brevity.
-        // Consider refetching: fetchCalendarPlan(); 
+        fetchCalendarPlan();
       }
+    }
+  };
+
+  const handleFetchAndStartAISuggestion = async () => {
+    setIsLoadingSuggestion(true);
+    setSuggestionError(null);
+    setSuggestedPracticeLinkState(null);
+    try {
+      const response = await fetch('/api/ai-suggested-practice', { method: 'POST' });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch AI suggestion.');
+      }
+      const suggestionData = await response.json();
+      // Ensure the structure matches what PracticePage expects for auto-start
+      // It expects: description, topic, subTopic, numQuestions.
+      // apiParams should contain testType, topic, subTopic.
+      // The backend now sends: description, apiParams, numQuestions, adaptive.
+      const navigationState = {
+          description: suggestionData.description,
+          topic: suggestionData.apiParams.topic, // from nested apiParams
+          subTopic: suggestionData.apiParams.subTopic, // from nested apiParams
+          numQuestions: suggestionData.numQuestions,
+          // PracticePage will derive adaptive status from its config matched by description
+          // or it can be explicitly passed if needed.
+          // For now, relying on description matching in PracticePage for full config.
+      };
+      setSuggestedPracticeLinkState(navigationState); // Store for navigation
+      navigate('/practice', { state: navigationState });
+
+    } catch (err) {
+      setSuggestionError(err.message);
+      console.error("Fetch AI suggestion error:", err);
+    } finally {
+      setIsLoadingSuggestion(false);
     }
   };
   
@@ -271,18 +338,44 @@ const Dashboard = () => {
     );
   };
 
+  const displayUserName = profileData?.name || "User";
+  let displayTestDateInfo = "Test information not available.";
+  if (profileData?.testDetails?.testType && profileData?.testDetails?.testDate) {
+    const testDate = parseISO(profileData.testDetails.testDate);
+    const daysRemaining = differenceInCalendarDays(testDate, new Date());
+    const formattedDate = format(testDate, 'MMMM d, yyyy');
+    if (daysRemaining < 0) {
+      displayTestDateInfo = `Your ${profileData.testDetails.testType} test was on ${formattedDate}. Time to update or add a new one!`;
+    } else if (daysRemaining === 0) {
+      displayTestDateInfo = `Your ${profileData.testDetails.testType} test is TODAY! Good luck!`;
+    } else {
+      displayTestDateInfo = `Your next ${profileData.testDetails.testType} test is in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} (on ${formattedDate}).`;
+    }
+  } else if (profileData?.testDetails?.testType) {
+    displayTestDateInfo = `Your ${profileData.testDetails.testType} test date is not set. Update it in Settings!`;
+  }
+
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="page-container dashboard-container">
         <div className="dashboard-header">
-          <h1 className="page-title" style={{textAlign: 'left', marginBottom: 'var(--spacing-unit)'}}>Welcome back, {userName}!</h1>
-          <p className="test-date-reminder">{testDateInfo}</p>
+          {isLoadingProfile ? (
+            <h1 className="page-title" style={{ textAlign: 'left', marginBottom: 'var(--spacing-unit)' }}>Loading profile...</h1>
+          ) : profileError ? (
+            <p className="error-message">Error loading profile: {profileError}</p>
+          ) : (
+            <>
+              <h1 className="page-title" style={{ textAlign: 'left', marginBottom: 'var(--spacing-unit)' }}>Welcome back, {displayUserName}!</h1>
+              <p className="test-date-reminder">{displayTestDateInfo}</p>
+            </>
+          )}
         </div>
 
         <div className="card dashboard-section study-plan-section">
           <h2 className="card-title">AI Suggested Study Plan</h2>
           {isLoadingCalendar && <p className="loading-message">Loading study plan...</p>}
-          {error && <p className="error-message">Error: {error} </p>} {/* Display DnD errors too */}
+          {calendarError && <p className="error-message">Error: {calendarError} </p>} {/* Displays calendar fetch or DnD errors */}
           
           {calendarPlan && !isLoadingCalendar && !calendarError && (
             <div className="calendar-view">
@@ -307,10 +400,12 @@ const Dashboard = () => {
         <p>Ready to improve your skills? Pick a topic and start practicing!</p>
          <button
            className="button button-success ai-practice-button"
-           onClick={() => navigate('/practice')}
+           onClick={handleFetchAndStartAISuggestion}
+           disabled={isLoadingSuggestion}
          >
-           AI Suggested Practice
+           {isLoadingSuggestion ? 'Fetching Suggestion...' : 'Start AI Suggested Practice'}
          </button>
+         {suggestionError && <p className="error-message" style={{marginTop: '10px'}}>{suggestionError}</p>}
       </div>
     </div>
   );

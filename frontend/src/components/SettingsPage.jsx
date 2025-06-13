@@ -16,9 +16,12 @@ const initialProfileData = {
 };
 
 const initialNewPastScore = {
-    type: 'SAT Full Official', date: '', overall: '', 
-    math: '', reading: '', writing: '', english: '', science: '', 
-    isOfficial: true 
+    type: 'SAT', // Default to SAT, can be changed by user
+    date: '',
+    overall: '',
+    subScores: { math: '', readingWriting: '', english: '', reading: '', science: '' }, // Standardized subScore keys
+    isOfficial: true,
+    testName: '', // For user-defined names like "Practice Test #1"
 };
 
 const SettingsPage = () => {
@@ -80,19 +83,38 @@ const SettingsPage = () => {
   const handleNewPastScoreChange = (e) => {
     const { name, value, type, checked } = e.target;
     const val = type === 'checkbox' ? checked : type === 'number' ? parseInt(value) || '' : value;
-    setNewPastScore(prev => ({ ...prev, [name]: val }));
+
+    if (name.startsWith("subScore_")) {
+        const subScoreKey = name.split("_")[1];
+        setNewPastScore(prev => ({
+            ...prev,
+            subScores: { ...prev.subScores, [subScoreKey]: val }
+        }));
+    } else {
+        setNewPastScore(prev => ({ ...prev, [name]: val }));
+        // If type changes, reset subScores to avoid carrying over irrelevant fields
+        if (name === "type") {
+            setNewPastScore(prev => ({
+                ...prev,
+                subScores: initialNewPastScore.subScores // Reset to blank structure
+            }));
+        }
+    }
   };
 
   const handleAddPastScore = () => {
-    if (!newPastScore.type || !newPastScore.date) {
-        alert("Please provide at least type and date for the past score.");
+    if ((!newPastScore.type && !newPastScore.testName) || !newPastScore.date || !newPastScore.overall) {
+        alert("Please provide at least a name/type, date, and overall score for the past score.");
         return;
     }
-    // Basic score type determination for required fields for this example
-    const scoreId = `${newPastScore.type.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+    const scoreToAdd = {
+        ...newPastScore,
+        scoreId: `${(newPastScore.testName || newPastScore.type).toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`,
+        // Ensure subScores are relevant or cleaned if necessary, though current logic handles this via type change
+    };
     setProfileData(prev => ({
       ...prev,
-      pastScores: [...prev.pastScores, {...newPastScore, scoreId: scoreId }],
+      pastScores: [...prev.pastScores, scoreToAdd],
     }));
     setNewPastScore(initialNewPastScore); // Reset form
   };
@@ -100,7 +122,7 @@ const SettingsPage = () => {
   const handleRemovePastScore = (scoreIdToRemove) => {
     setProfileData(prev => ({
       ...prev,
-      pastScores: prev.pastScores.filter(score => score.scoreId !== scoreIdToRemove),
+      pastScores: prev.pastScores.filter(score => (score.scoreId || score.testId) !== scoreIdToRemove),
     }));
   };
 
@@ -192,19 +214,59 @@ const SettingsPage = () => {
             <div className="past-scores-list">
                 {profileData.pastScores.length === 0 && <p>No past scores added yet.</p>}
                 {profileData.pastScores.map((score, index) => (
-                    <div key={score.scoreId || index} className="past-score-item">
-                        <span><strong>{score.type}</strong> ({score.date}): Overall: {score.overall}</span>
-                        {/* TODO: Display sub-scores based on type */}
-                        <button type="button" onClick={() => handleRemovePastScore(score.scoreId)} className="button button-danger button-sm remove-score-btn">Remove</button>
+                    <div key={score.scoreId || score.testId || index} className="past-score-item">
+                        <span>
+                            <strong>{score.testName || score.type}</strong>
+                            ({new Date(score.date).toLocaleDateString()}):
+                            Overall: {score.overallScore || score.overall}
+                            {score.isMultiSection && score.sections && ` (${score.sections.length} sections)`}
+                            {score.subScores && !score.isMultiSection && (
+                                <span style={{fontSize: '0.8em', marginLeft: '10px'}}>
+                                    (
+                                    {score.type === 'SAT' && `M: ${score.subScores.math || 'N/A'}, R/W: ${score.subScores.readingWriting || 'N/A'}`}
+                                    {score.type === 'ACT' && `E: ${score.subScores.english || 'N/A'}, M: ${score.subScores.math || 'N/A'}, R: ${score.subScores.reading || 'N/A'}, S: ${score.subScores.science || 'N/A'}`}
+                                    )
+                                </span>
+                            )}
+                        </span>
+                        <button type="button" onClick={() => handleRemovePastScore(score.scoreId || score.testId)} className="button button-danger button-sm remove-score-btn">Remove</button>
                     </div>
                 ))}
             </div>
             <div className="add-past-score-form">
                 <h3 className="sub-card-title">Add New Past Score</h3>
-                <div className="form-group"><label>Type:</label><input type="text" name="type" value={newPastScore.type} onChange={handleNewPastScoreChange} className="form-control" placeholder="e.g., SAT Full Practice, ACT Math Section"/></div>
+                <div className="form-group">
+                    <label>Test Name (Optional):</label>
+                    <input type="text" name="testName" value={newPastScore.testName} onChange={handleNewPastScoreChange} className="form-control" placeholder="e.g., Official Practice Test 1"/>
+                </div>
+                <div className="form-group">
+                    <label>Test Type:</label>
+                    <select name="type" value={newPastScore.type} onChange={handleNewPastScoreChange} className="form-control">
+                        <option value="SAT">SAT</option>
+                        <option value="ACT">ACT</option>
+                        <option value="PSAT">PSAT</option>
+                        <option value="Other">Other Practice</option>
+                    </select>
+                </div>
                 <div className="form-group"><label>Date:</label><input type="date" name="date" value={newPastScore.date} onChange={handleNewPastScoreChange} className="form-control"/></div>
                 <div className="form-group"><label>Overall Score:</label><input type="number" name="overall" value={newPastScore.overall} onChange={handleNewPastScoreChange} className="form-control"/></div>
-                {/* Add conditional sub-score inputs here based on newPastScore.type if desired */}
+
+                {newPastScore.type === 'SAT' && (
+                    <>
+                        <div className="form-group"><label>Math Score (SAT):</label><input type="number" name="subScore_math" value={newPastScore.subScores.math} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                        <div className="form-group"><label>Reading/Writing Score (SAT):</label><input type="number" name="subScore_readingWriting" value={newPastScore.subScores.readingWriting} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                    </>
+                )}
+                {newPastScore.type === 'ACT' && (
+                    <>
+                        <div className="form-group"><label>English Score (ACT):</label><input type="number" name="subScore_english" value={newPastScore.subScores.english} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                        <div className="form-group"><label>Math Score (ACT):</label><input type="number" name="subScore_math" value={newPastScore.subScores.math} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                        <div className="form-group"><label>Reading Score (ACT):</label><input type="number" name="subScore_reading" value={newPastScore.subScores.reading} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                        <div className="form-group"><label>Science Score (ACT):</label><input type="number" name="subScore_science" value={newPastScore.subScores.science} onChange={handleNewPastScoreChange} className="form-control"/></div>
+                    </>
+                )}
+                {/* For 'Other' or 'PSAT', no specific sub-score fields are shown here, but they could be added */}
+
                 <div className="form-group"><label><input type="checkbox" name="isOfficial" checked={newPastScore.isOfficial} onChange={handleNewPastScoreChange} /> Official Score?</label></div>
                 <button type="button" onClick={handleAddPastScore} className="button button-secondary">Add Score to List</button>
             </div>

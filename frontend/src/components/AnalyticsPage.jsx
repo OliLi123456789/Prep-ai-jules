@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 import './AnalyticsPage.css';
 
 const AnalyticsPage = () => {
@@ -79,17 +82,29 @@ const AnalyticsPage = () => {
       <section className="graph-section card">
         <h2 className="card-title">Performance Over Time (Practice)</h2>
         {analyticsData.performanceOverTime && analyticsData.performanceOverTime.length > 0 ? (
-          <div className="performance-list">
-            {analyticsData.performanceOverTime.map((item, index) => (
-              <p key={index} style={{fontSize: '0.9rem', borderBottom: '1px solid #eee', paddingBottom:'4px', marginBottom:'4px'}}>
-                Date: {new Date(item.date).toLocaleDateString()}, Score: {formatScore(item.score)}
-              </p>
-            ))}
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={analyticsData.performanceOverTime.map(item => ({
+                ...item,
+                // Assuming date is 'YYYY-MM-DD', format for display if needed, or ensure data is sortable
+                date: new Date(item.date).toLocaleDateString(),
+                score: parseFloat((item.score * 100).toFixed(1)) // Convert to percentage for Y-axis
+              }))}
+              margin={{
+                top: 5, right: 30, left: 20, bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis unit="%" domain={[0, 100]} />
+              <Tooltip formatter={(value) => `${value}%`} />
+              <Legend />
+              <Line type="monotone" dataKey="score" stroke="#8884d8" activeDot={{ r: 8 }} name="Practice Score"/>
+            </LineChart>
+          </ResponsiveContainer>
         ) : (
           <div className="graph-placeholder">
-            <p>Performance Over Time Graph Placeholder</p>
-            <p>(No practice performance data available or Chart.js would be integrated here)</p>
+            <p>No practice performance data available to display graph.</p>
           </div>
         )}
       </section>
@@ -113,9 +128,12 @@ const AnalyticsPage = () => {
         <h2 className="card-title">Past Full Test Scores</h2>
         {analyticsData.pastTestScoresSummary && analyticsData.pastTestScoresSummary.length > 0 ? (
            analyticsData.pastTestScoresSummary.map((test, index) => (
-            <div key={index} className="stat-item" style={{marginBottom: 'var(--spacing-unit)'}}>
-                <span className="stat-label" style={{fontWeight:'bold'}}>{test.type} - {new Date(test.date).toLocaleDateString()}</span>
-                <span className="stat-value" style={{fontSize: '1.1rem'}}>Overall: {test.overall}</span>
+            <div key={test.testId || index} className="stat-item" style={{marginBottom: 'var(--spacing-unit)'}}>
+                <span className="stat-label" style={{fontWeight:'bold'}}>
+                  {test.testName || test.type} - {new Date(test.date).toLocaleDateString()}
+                  {test.isMultiSection && test.sections && ` (${test.sections.length} sections)`}
+                </span>
+                <span className="stat-value" style={{fontSize: '1.1rem'}}>Overall: {test.overallScore || test.overall}</span>
             </div>
            ))
         ) : (

@@ -1,23 +1,55 @@
 import React, { useState } from 'react';
 import { tutorTopics } from '../constants/tutorTopics';
 import QuizPlayer from './QuizPlayer'; // Import QuizPlayer
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { InlineMath, BlockMath } from 'react-katex';
-import 'katex/dist/katex.min.css'; // Import KaTeX CSS
+import 'katex/dist/katex.min.css';
 import './AITutorPage.css';
 
-// Utility function to render text with LaTeX (can be moved to a shared utils file)
-const renderTextWithLaTeX = (text) => {
-  if (!text) return null;
-  // Regex to find $...$ and $$...$$
-  const parts = text.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
-    } else if (part.startsWith('$') && part.endsWith('$')) {
-      return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
-    }
-    return part; // Regular text part
-  });
+// Combined Markdown and LaTeX Renderer Component (can be moved to a shared utils file)
+const MarkdownWithLaTeX = ({ content }) => {
+  if (!content) return null;
+
+  const components = {
+    code: ({ inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      if (inline) {
+        return <code className={className} {...props}>{children}</code>;
+      }
+      if (match && match[1] === 'latex') {
+        return <BlockMath math={String(children).replace(/\n$/, '')} />;
+      }
+      return <code className={className} {...props}>{children}</code>;
+    },
+    p: ({ node, ...props }) => <p>{renderTextNodesWithLaTeX(props.children)}</p>,
+    li: ({ node, ...props }) => <li>{renderTextNodesWithLaTeX(props.children)}</li>,
+    h1: ({ node, ...props }) => <h1>{renderTextNodesWithLaTeX(props.children)}</h1>,
+    h2: ({ node, ...props }) => <h2>{renderTextNodesWithLaTeX(props.children)}</h2>,
+    h3: ({ node, ...props }) => <h3>{renderTextNodesWithLaTeX(props.children)}</h3>,
+    h4: ({ node, ...props }) => <h4>{renderTextNodesWithLaTeX(props.children)}</h4>,
+    td: ({ node, ...props }) => <td>{renderTextNodesWithLaTeX(props.children)}</td>,
+    th: ({ node, ...props }) => <th>{renderTextNodesWithLaTeX(props.children)}</th>,
+  };
+
+  const renderTextNodesWithLaTeX = (children) => {
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') {
+        const parts = child.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
+        return parts.map((part, index) => {
+          if (part.startsWith('$$') && part.endsWith('$$')) {
+            return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
+          } else if (part.startsWith('$') && part.endsWith('$')) {
+            return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
+          }
+          return part;
+        });
+      }
+      return child;
+    });
+  };
+
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{content}</ReactMarkdown>;
 };
 
 
@@ -403,14 +435,14 @@ const AITutorPage = () => {
             {learningContent && !isLoading && !error && (
               <div className="content-display-box learn-content-display">
                 <h3>{learningContent.title}</h3>
-                <div className="module-intro"><em>{renderTextWithLaTeX(learningContent.introduction)}</em></div>
+                <div className="module-intro"><em><MarkdownWithLaTeX content={learningContent.introduction} /></em></div>
 
                 <h4>Key Concepts:</h4>
                 {learningContent.key_concepts?.map((concept, index) => (
                   <div key={index} className="learning-module-item key-concept-item">
                     <p><strong>{index + 1}. {concept.concept_name}</strong></p>
-                    <div>{renderTextWithLaTeX(concept.explanation)}</div>
-                    <div><em>Example: {renderTextWithLaTeX(concept.example)}</em></div>
+                    <div><MarkdownWithLaTeX content={concept.explanation} /></div>
+                    <div><em>Example: <MarkdownWithLaTeX content={concept.example} /></em></div>
                   </div>
                 ))}
 
@@ -419,17 +451,18 @@ const AITutorPage = () => {
                         <h4>Practice Questions from this Module:</h4>
                         {learningContent.practice_questions.map((pq, index) => (
                         <div key={index} className="learning-module-item practice-question-display">
-                            <div><strong>Q{index + 1}: {renderTextWithLaTeX(pq.question_text)}</strong></div>
-                            <ul>{pq.options?.map((opt, i) => <li key={i}>{renderTextWithLaTeX(opt)}</li>)}</ul>
-                            <div><em>Correct Answer: {renderTextWithLaTeX(pq.correct_answer)}</em></div>
-                            <div><em>Explanation: {renderTextWithLaTeX(pq.explanation)}</em></div>
+                            <div><strong>Q{index + 1}: <MarkdownWithLaTeX content={pq.question_text} /></strong></div>
+                             {/* Assuming options are simple text, if they can contain markdown/latex, apply MarkdownWithLaTeX too */}
+                            <ul>{pq.options?.map((opt, i) => <li key={i}>{opt}</li>)}</ul>
+                            <div><em>Correct Answer: <MarkdownWithLaTeX content={pq.correct_answer} /></em></div>
+                            <div><em>Explanation: <MarkdownWithLaTeX content={pq.explanation} /></em></div>
                         </div>
                         ))}
                     </>
                 )}
 
                 <h4>Summary:</h4>
-                <div>{renderTextWithLaTeX(learningContent.summary)}</div>
+                <div><MarkdownWithLaTeX content={learningContent.summary} /></div>
               </div>
             )}
              {/* Display this message if learningContent is null and not loading and no error */}
@@ -501,8 +534,8 @@ const AITutorPage = () => {
                 {guidedPracticeData.guidance && (
                   <>
                     <h5 style={{marginTop: 'var(--spacing-unit) * 2'}}>Step-by-Step Guidance:</h5>
-                    <div className="guidance-text" style={{ whiteSpace: 'pre-wrap' }}>
-                      {renderTextWithLaTeX(guidedPracticeData.guidance)}
+                    <div className="guidance-text"> {/* Removed whiteSpace: 'pre-wrap' to let Markdown handle it */}
+                      <MarkdownWithLaTeX content={guidedPracticeData.guidance} />
                     </div>
                   </>
                 )}
