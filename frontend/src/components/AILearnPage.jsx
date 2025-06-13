@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom'; // Import useLocation and useNavigate
-import './AILearnPage.css'; 
+import { useLocation, useNavigate } from 'react-router-dom';
+import { InlineMath, BlockMath } from 'react-katex';
+import 'katex/dist/katex.min.css'; // Import KaTeX CSS
+import './AILearnPage.css';
+
+// Utility function to render text with LaTeX
+const renderTextWithLaTeX = (text) => {
+  if (!text) return null;
+  // Regex to find $...$ and $$...$$
+  const parts = text.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('$$') && part.endsWith('$$')) {
+      return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
+    }
+    return part; // Regular text part
+  });
+};
 
 const AILearnPage = () => {
   const location = useLocation();
@@ -247,7 +264,7 @@ const AILearnPage = () => {
           
           <section className="module-section introduction-section">
             <h3>Introduction</h3>
-            <p>{learningModule.introduction}</p>
+            <div>{renderTextWithLaTeX(learningModule.introduction)}</div>
           </section>
 
           <section className="module-section key-concepts-section">
@@ -255,8 +272,8 @@ const AILearnPage = () => {
             {learningModule.key_concepts.map((concept, index) => (
               <div key={index} className="key-concept">
                 <h4>{index + 1}. {concept.concept_name}</h4>
-                <p className="concept-explanation"><strong>Explanation:</strong> {concept.explanation}</p>
-                <p className="concept-example"><strong>Example:</strong> {concept.example}</p>
+                <div className="concept-explanation"><strong>Explanation:</strong> {renderTextWithLaTeX(concept.explanation)}</div>
+                <div className="concept-example"><strong>Example:</strong> {renderTextWithLaTeX(concept.example)}</div>
               </div>
             ))}
           </section>
@@ -264,8 +281,13 @@ const AILearnPage = () => {
           <section className="module-section practice-questions-section">
             <h3>Practice Questions</h3>
             {learningModule.practice_questions.map((pq, index) => (
+              // Assuming QuizPlayer or a similar component would be used here for actual questions,
+              // which already has LaTeX rendering for visual_assets.
+              // If pq.question_text or pq.explanation themselves are expected to have inline LaTeX,
+              // they would need renderTextWithLaTeX as well.
+              // For now, let's assume question text/explanations from this part of the module are simple or use visual_assets.
               <div key={index} className="practice-question-item">
-                <p className="pq-text"><strong>Question {index + 1}:</strong> {pq.question_text}</p>
+                <div className="pq-text"><strong>Question {index + 1}:</strong> {renderTextWithLaTeX(pq.question_text)}</div>
                 <div className="options-list pq-options">
                   {pq.options.map((option, optIndex) => (
                     <button 
@@ -292,7 +314,7 @@ const AILearnPage = () => {
                   <div className="explanation-area pq-explanation">
                     <p><strong>Your Answer:</strong> {userPracticeAnswers[index].selected} ({userPracticeAnswers[index].correct ? "Correct" : "Incorrect"})</p>
                     <p><strong>Correct Answer:</strong> {pq.correct_answer}</p>
-                    <p><strong>Explanation:</strong> {pq.explanation}</p>
+                    <div className="pq-explanation"><strong>Explanation:</strong> {renderTextWithLaTeX(pq.explanation)}</div>
                   </div>
                 )}
               </div>
@@ -301,7 +323,7 @@ const AILearnPage = () => {
 
           <section className="module-section summary-section">
             <h3>Summary</h3>
-            <p>{learningModule.summary}</p> {/* Assuming summary is a paragraph, or map if array of bullets */}
+            <div>{renderTextWithLaTeX(learningModule.summary)}</div>
           </section>
         </div>
       )}

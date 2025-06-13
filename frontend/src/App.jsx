@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css'; // Styles for App component
 import Header from './components/Header';
 import Testimonials from './components/Testimonials';
@@ -50,7 +50,7 @@ function App() {
                     <section className="hero-section">
                       <h2>Welcome to Your Personalized Prep Journey!</h2>
                       <p>Master the SAT & ACT with AI-powered insights and tailored study plans.</p>
-                      <button className="cta-button">Get Started Now</button>
+                      <GetStartedButton />
                     </section>
                   </>
                 } />

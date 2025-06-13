@@ -305,7 +305,12 @@ const Dashboard = () => {
       <div className="card dashboard-section practice-section">
         <h2 className="card-title">Practice Zone</h2>
         <p>Ready to improve your skills? Pick a topic and start practicing!</p>
-         <button className="button button-success ai-practice-button">AI Suggested Practice</button>
+         <button
+           className="button button-success ai-practice-button"
+           onClick={() => navigate('/practice')}
+         >
+           AI Suggested Practice
+         </button>
       </div>
     </div>
   );

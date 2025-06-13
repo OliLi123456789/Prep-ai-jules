@@ -64,7 +64,7 @@ const getAIQuestions = async (params) => {
   const fullTestContext = `${testTypeContext}${moduleContext}`;
 
   const apiUrl = 'https://api.deepseek.com/chat/completions';
-  const promptString = `Generate ${params.numQuestions} ${difficultyInstruction}questions for an ${params.topic} test (specifically for ${fullTestContext}), focusing on ${params.subTopic}. Return the output as a VALID JSON array where each element is an object with the following keys: 'question_text' (string), 'options' (array of 4 strings), 'correct_answer' (string - one of the options), 'explanation' (string), and optionally 'visual_assets'. If 'visual_assets' is used, it must be an object with 'type' (string, either 'latex' or 'svg') and 'data' (string, the LaTeX or SVG code). Ensure no extra text or markdown formatting outside the JSON array. The entire response should be only the JSON array itself.`;
+  const promptString = `Generate ${params.numQuestions} ${difficultyInstruction}questions for an ${params.topic} test (specifically for ${fullTestContext}), focusing on ${params.subTopic}. Return the output as a VALID JSON array where each element is an object with the following keys: 'question_text' (string), 'options' (array of 4 strings), 'correct_answer' (string - one of the options), 'explanation' (string), and optionally 'visual_assets'. If 'visual_assets' is used, it must be an object with 'type' (string, either 'latex' or 'svg') and 'data' (string, the LaTeX or SVG code). For any mathematical expressions, equations, or notations in the 'question_text' or 'explanation', you MUST use the 'visual_assets' field with type 'latex' to represent them. For non-mathematical visuals, 'svg' or other types can be used if appropriate. Ensure no extra text or markdown formatting outside the JSON array. The entire response should be only the JSON array itself.`;
 
   console.log("Constructed Prompt String:", promptString); // Log the prompt
 
@@ -211,9 +211,9 @@ Question: "${questionText}"
   if (correctAnswer) {
     userPrompt += `The correct answer is: "${correctAnswer}"\n`;
   }
-  userPrompt += "Provide your step-by-step solution:";
+  userPrompt += "Provide your step-by-step solution. Ensure that all mathematical formulas, symbols, or equations in your explanation are formatted using LaTeX delimiters ($...$ for inline math and $$...$$ for block math). For example, 'The slope-intercept form is $y = mx + b$.':";
 
-  let systemPromptContent = `You are a friendly, patient, and encouraging AI Tutor specializing in SAT and ACT preparation. Your goal is to help students deeply understand concepts, effectively break down difficult problems step-by-step, and offer clear, actionable explanations. Focus on providing a clear, logical, and easy-to-follow path to the solution.`;
+  let systemPromptContent = `You are a friendly, patient, and encouraging AI Tutor specializing in SAT and ACT preparation. Your goal is to help students deeply understand concepts, effectively break down difficult problems step-by-step, and offer clear, actionable explanations. Focus on providing a clear, logical, and easy-to-follow path to the solution. You MUST use LaTeX delimiters ($...$ for inline math, $$...$$ for block math) for all mathematical expressions in your explanations.`;
 
   if (subTopic.toLowerCase().includes('calculator')) {
     userPrompt = `This question is related to calculator usage for ${topic} - ${subTopic}.\n${userPrompt}`;
@@ -765,22 +765,22 @@ app.post('/api/ai-learn-topic', async (req, res) => {
 
   const apiUrl = 'https://api.deepseek.com/chat/completions';
   
-  const systemPrompt = "You are an expert educator and curriculum designer. Your task is to generate a structured learning module for SAT/ACT preparation on a specific topic. The module should be comprehensive yet concise. Output ONLY the valid JSON object as specified, with no surrounding text or markdown formatting.";
+  const systemPrompt = "You are an expert educator and curriculum designer. Your task is to generate a structured learning module for SAT/ACT preparation on a specific topic. The module should be comprehensive yet concise. Output ONLY the valid JSON object as specified, with no surrounding text or markdown formatting. For all mathematical formulas, symbols, or equations within the 'introduction', 'key_concepts.explanation', 'key_concepts.example', 'practice_questions.explanation', and 'summary' fields, use LaTeX delimiters: $...$ for inline math and $$...$$ for block math. For 'practice_questions.question_text', if it contains complex math, prefer using the 'visual_assets' field of the question object as specified in other contexts; otherwise, inline LaTeX is acceptable if simple.";
   const userPrompt = `Generate a learning module for ${testType} - Section: ${section}, focusing on SubTopic: ${subTopic}.
 The JSON object must have the following structure:
 {
   "title": "Learning Module: [Generated Title for the SubTopic, e.g., Mastering Quadratic Equations]",
-  "introduction": "Engaging introduction to the subtopic (2-4 sentences).",
+  "introduction": "Engaging introduction to the subtopic (2-4 sentences). Ensure all math is LaTeX delimited, e.g., $ax^2+bx+c=0$.",
   "key_concepts": [
-    { "concept_name": "[Concept 1 Name]", "explanation": "Detailed but clear explanation of concept 1 (3-5 sentences).", "example": "A practical example or illustration of concept 1 (e.g., a solved math problem, a sentence structure example for writing)." },
-    { "concept_name": "[Concept 2 Name]", "explanation": "Detailed but clear explanation of concept 2 (3-5 sentences).", "example": "A practical example or illustration of concept 2." },
-    { "concept_name": "[Concept 3 Name]", "explanation": "Detailed but clear explanation of concept 3 (3-5 sentences).", "example": "A practical example or illustration of concept 3." }
+    { "concept_name": "[Concept 1 Name]", "explanation": "Detailed but clear explanation of concept 1 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 1. Ensure all math is LaTeX delimited (e.g., a solved problem like $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$)." },
+    { "concept_name": "[Concept 2 Name]", "explanation": "Detailed but clear explanation of concept 2 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 2. Ensure all math is LaTeX delimited." },
+    { "concept_name": "[Concept 3 Name]", "explanation": "Detailed but clear explanation of concept 3 (3-5 sentences). Ensure all math is LaTeX delimited.", "example": "A practical example or illustration of concept 3. Ensure all math is LaTeX delimited." }
   ],
   "practice_questions": [
-    { "question_text": "[Question 1 text related to the concepts]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., A]", "explanation": "Brief explanation for this practice question (1-2 sentences)." },
-    { "question_text": "[Question 2 text related to the concepts]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., B]", "explanation": "Brief explanation for this practice question (1-2 sentences)." }
+    { "question_text": "[Question 1 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., A]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited.", "visual_assets": { "type": "latex", "data": "[LaTeX for complex math in question_text]" } },
+    { "question_text": "[Question 2 text. Use 'visual_assets' for complex math if needed, otherwise simple inline $LaTeX$ is fine.]", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_answer": "[Correct Option Letter, e.g., B]", "explanation": "Brief explanation for this practice question (1-2 sentences). Ensure all math is LaTeX delimited." }
   ],
-  "summary": "Key takeaways summarized (2-3 concise bullet points or a short paragraph)."
+  "summary": "Key takeaways summarized (2-3 concise bullet points or a short paragraph). Ensure all math is LaTeX delimited."
 }
 Ensure the 'correct_answer' for practice_questions is just the letter or text of the correct option, matching one of the provided options.
 Produce a JSON object and nothing else.`;

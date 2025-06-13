@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
 import { tutorTopics } from '../constants/tutorTopics';
 import QuizPlayer from './QuizPlayer'; // Import QuizPlayer
+import { InlineMath, BlockMath } from 'react-katex';
+import 'katex/dist/katex.min.css'; // Import KaTeX CSS
 import './AITutorPage.css';
+
+// Utility function to render text with LaTeX (can be moved to a shared utils file)
+const renderTextWithLaTeX = (text) => {
+  if (!text) return null;
+  // Regex to find $...$ and $$...$$
+  const parts = text.split(/(\$\$[^$]+\$\$|\$[^\$]+\$)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('$$') && part.endsWith('$$')) {
+      return <BlockMath key={index} math={part.substring(2, part.length - 2)} />;
+    } else if (part.startsWith('$') && part.endsWith('$')) {
+      return <InlineMath key={index} math={part.substring(1, part.length - 1)} />;
+    }
+    return part; // Regular text part
+  });
+};
+
 
 const AITutorPage = () => {
   const [currentTestType, setCurrentTestType] = useState('');
@@ -385,14 +403,14 @@ const AITutorPage = () => {
             {learningContent && !isLoading && !error && (
               <div className="content-display-box learn-content-display">
                 <h3>{learningContent.title}</h3>
-                <p className="module-intro"><em>{learningContent.introduction}</em></p>
+                <div className="module-intro"><em>{renderTextWithLaTeX(learningContent.introduction)}</em></div>
 
                 <h4>Key Concepts:</h4>
                 {learningContent.key_concepts?.map((concept, index) => (
                   <div key={index} className="learning-module-item key-concept-item">
                     <p><strong>{index + 1}. {concept.concept_name}</strong></p>
-                    <p>{concept.explanation}</p>
-                    <p><em>Example: {concept.example}</em></p>
+                    <div>{renderTextWithLaTeX(concept.explanation)}</div>
+                    <div><em>Example: {renderTextWithLaTeX(concept.example)}</em></div>
                   </div>
                 ))}
 
@@ -401,17 +419,17 @@ const AITutorPage = () => {
                         <h4>Practice Questions from this Module:</h4>
                         {learningContent.practice_questions.map((pq, index) => (
                         <div key={index} className="learning-module-item practice-question-display">
-                            <p><strong>Q{index + 1}: {pq.question_text}</strong></p>
-                            <ul>{pq.options?.map((opt, i) => <li key={i}>{opt}</li>)}</ul>
-                            <p><em>Correct Answer: {pq.correct_answer}</em></p>
-                            <p><em>Explanation: {pq.explanation}</em></p>
+                            <div><strong>Q{index + 1}: {renderTextWithLaTeX(pq.question_text)}</strong></div>
+                            <ul>{pq.options?.map((opt, i) => <li key={i}>{renderTextWithLaTeX(opt)}</li>)}</ul>
+                            <div><em>Correct Answer: {renderTextWithLaTeX(pq.correct_answer)}</em></div>
+                            <div><em>Explanation: {renderTextWithLaTeX(pq.explanation)}</em></div>
                         </div>
                         ))}
                     </>
                 )}
 
                 <h4>Summary:</h4>
-                <p>{learningContent.summary}</p>
+                <div>{renderTextWithLaTeX(learningContent.summary)}</div>
               </div>
             )}
              {/* Display this message if learningContent is null and not loading and no error */}
@@ -484,7 +502,7 @@ const AITutorPage = () => {
                   <>
                     <h5 style={{marginTop: 'var(--spacing-unit) * 2'}}>Step-by-Step Guidance:</h5>
                     <div className="guidance-text" style={{ whiteSpace: 'pre-wrap' }}>
-                      {guidedPracticeData.guidance}
+                      {renderTextWithLaTeX(guidedPracticeData.guidance)}
                     </div>
                   </>
                 )}
