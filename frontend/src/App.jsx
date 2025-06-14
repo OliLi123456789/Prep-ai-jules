@@ -50,7 +50,7 @@ function App() {
                     <section className="hero-section">
                       <h2>Welcome to Your Personalized Prep Journey!</h2>
                       <p>Master the SAT & ACT with AI-powered insights and tailored study plans.</p>
-                      <GetStartedButton />
+                      <DefinedGetStartedButton onLoginTrigger={handleLogin} />
                     </section>
                   </>
                 } />
@@ -68,5 +68,23 @@ function App() {
     </Router>
   );
 }
+
+// Defined GetStartedButton that receives onLoginTrigger prop
+const DefinedGetStartedButton = ({ onLoginTrigger }) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (typeof onLoginTrigger === 'function') {
+      onLoginTrigger(); // Call the login handler passed from App
+    }
+    navigate('/dashboard'); // Then navigate
+  };
+
+  return (
+    <button className="cta-button" onClick={handleClick}>
+      Get Started Now
+    </button>
+  );
+};
 
 export default App;
