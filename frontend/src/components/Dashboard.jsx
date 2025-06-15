@@ -70,12 +70,6 @@ const Dashboard = () => {
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
   const [suggestionError, setSuggestionError] = useState(null);
 
-  // DnD Sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // Drag if moved 5px
-    useSensor(KeyboardSensor)
-  );
-
   useEffect(() => {
     const fetchProfileData = async () => {
       setIsLoadingProfile(true);
@@ -96,7 +90,6 @@ const Dashboard = () => {
       }
     };
 
-    };
     fetchProfileData(); // Fetch profile on mount
 
     const fetchCalendarPlan = async () => {
