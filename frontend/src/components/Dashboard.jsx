@@ -171,7 +171,7 @@ const Dashboard = () => {
       // Optimistic UI Update
       setCalendarPlan(currentPlan => {
         if (!currentPlan) return null;
-        const newDailyTasks = currentPlan.dailyTasks.map(daySchedule => {
+        let newDailyTasks = currentPlan.dailyTasks.map(daySchedule => {
           let newTasks = [...daySchedule.tasks];
           // Remove from original date
           if (daySchedule.date === originalDate) {
