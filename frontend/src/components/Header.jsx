@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Import Link
+import { Link, useNavigate } from 'react-router-dom'; // Import Link and useNavigate
 import './Header.css';
 
 const Header = ({ onLogin, onLogout, isLoggedIn }) => {
+  const navigate = useNavigate(); // Add this line
   const [testType, setTestType] = useState('SAT');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -73,7 +74,7 @@ const Header = ({ onLogin, onLogout, isLoggedIn }) => {
         ) : (
           <>
             <button className="button button-outline-primary header-button-custom">Try for Free</button>
-            <button className="button button-primary login-button-custom" onClick={onLogin}>Log In</button>
+            <button className="button button-primary login-button-custom" onClick={handleLoginClick}>Log In</button>
           </>
         )}
       </div>

@@ -549,7 +549,6 @@ app.get('/api/ai-calendar-plan', async (req, res) => {
     const userDataString = await fs.readFile(mockDataPath, 'utf8');
     const userData = JSON.parse(userDataString);
 
-    let userData = JSON.parse(userDataString); // Use let as userData might be modified
     const { testDetails, pastScores, practiceHistory, userPreferences, name, generatedPlan: existingPlan } = userData;
     
     const today = new Date();
